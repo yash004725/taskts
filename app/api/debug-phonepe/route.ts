@@ -8,6 +8,7 @@ export async function GET(request: Request) {
     const saltKey = process.env.PHONEPE_SALT_KEY || "MISSING"
     const saltIndex = process.env.PHONEPE_SALT_INDEX || "MISSING"
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://xdigitalhub.vercel.app"
+    const apiKey = "5093c394-38c3-4002-9813-d5eb127f1eeb"
 
     // Test checksum generation
     const testPayload = {
@@ -32,6 +33,38 @@ export async function GET(request: Request) {
     const sha256 = crypto.createHash("sha256").update(string).digest("hex")
     const checksum = `${sha256}###${saltIndex}`
 
+    // Test API call with minimal request
+    let testApiResponse = "Not tested"
+    let testApiStatus = "Not tested"
+
+    try {
+      // Only test if we have all required credentials
+      if (merchantId !== "MISSING" && saltKey !== "MISSING") {
+        const testUrl = "https://api.phonepe.com/apis/hermes/pg/v1/pay"
+        const testBody = {
+          request: payloadBase64,
+        }
+
+        const headers = {
+          "Content-Type": "application/json",
+          "X-VERIFY": checksum,
+          Accept: "application/json",
+          "X-API-KEY": apiKey,
+        }
+
+        const response = await fetch(testUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(testBody),
+        })
+
+        testApiStatus = response.status.toString()
+        testApiResponse = await response.text()
+      }
+    } catch (error) {
+      testApiResponse = `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+    }
+
     return NextResponse.json({
       environment: {
         merchantId: merchantId === "MISSING" ? "❌ Missing" : "✅ Set",
@@ -45,8 +78,18 @@ export async function GET(request: Request) {
         sha256: sha256,
         checksum,
       },
-      apiKey: "5093c394-38c3-4002-9813-d5eb127f1eeb", // The API key you provided
-      mode: "PRODUCTION", // We're using production mode
+      apiKey: apiKey,
+      mode: "PRODUCTION",
+      testApiCall: {
+        status: testApiStatus,
+        response: testApiResponse,
+      },
+      headers: {
+        "Content-Type": "application/json",
+        "X-VERIFY": checksum,
+        Accept: "application/json",
+        "X-API-KEY": apiKey,
+      },
     })
   } catch (error) {
     console.error("Debug error:", error)

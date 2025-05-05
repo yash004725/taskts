@@ -83,18 +83,18 @@ export async function initiatePhonePePayment(options: PhonePePaymentOptions) {
     }
 
     // Add optional fields if provided
+    const fullPayload = { ...payload }
     if (mobileNumber) {
-      payload.mobileNumber = mobileNumber
+      fullPayload.mobileNumber = mobileNumber
     }
-
     if (email) {
-      payload.email = email
+      fullPayload.email = email
     }
 
-    console.log("PhonePe payload:", JSON.stringify(payload, null, 2))
+    console.log("PhonePe payload:", JSON.stringify(fullPayload, null, 2))
 
     // Convert payload to base64
-    const payloadString = JSON.stringify(payload)
+    const payloadString = JSON.stringify(fullPayload)
     const payloadBase64 = Buffer.from(payloadString).toString("base64")
     console.log("Payload Base64:", payloadBase64)
 
@@ -119,15 +119,23 @@ export async function initiatePhonePePayment(options: PhonePePaymentOptions) {
     console.log("Request body:", JSON.stringify(requestBody, null, 2))
 
     // Make the API call with proper headers
+    // Note: PhonePe API expects specific headers in a specific format
+    const headers = {
+      "Content-Type": "application/json",
+      "X-VERIFY": checksum,
+      Accept: "application/json",
+    }
+
+    // Only add API key if we're using production mode
+    if (USE_PRODUCTION) {
+      headers["X-API-KEY"] = API_KEY
+    }
+
+    console.log("Request headers:", JSON.stringify(headers, null, 2))
+
     const response = await fetch(getApiUrl(), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-VERIFY": checksum,
-        Accept: "application/json",
-        "X-MERCHANT-ID": MERCHANT_ID,
-        "X-API-KEY": API_KEY,
-      },
+      headers,
       body: JSON.stringify(requestBody),
     })
 
@@ -223,15 +231,21 @@ export async function verifyPhonePePayment(merchantTransactionId: string) {
     console.log("String for verification checksum:", string)
     console.log("PhonePe verification checksum:", checksum)
 
+    // Prepare headers for verification request
+    const headers = {
+      "Content-Type": "application/json",
+      "X-VERIFY": checksum,
+      Accept: "application/json",
+    }
+
+    // Only add API key if we're using production mode
+    if (USE_PRODUCTION) {
+      headers["X-API-KEY"] = API_KEY
+    }
+
     const response = await fetch(checkUrl, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "X-VERIFY": checksum,
-        "X-MERCHANT-ID": MERCHANT_ID,
-        "X-API-KEY": API_KEY,
-        Accept: "application/json",
-      },
+      headers,
     })
 
     console.log("PhonePe verification response status:", response.status)

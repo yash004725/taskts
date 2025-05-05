@@ -2,333 +2,190 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Bug, RefreshCw, Minimize } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { Loader2, AlertCircle, ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 export default function PhonePeTestPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const [directTestLoading, setDirectTestLoading] = useState(false)
-  const [minimalTestLoading, setMinimalTestLoading] = useState(false)
-  const [debugLoading, setDebugLoading] = useState(false)
-  const [response, setResponse] = useState<any>(null)
-  const [directTestResponse, setDirectTestResponse] = useState<any>(null)
-  const [minimalTestResponse, setMinimalTestResponse] = useState<any>(null)
   const [debugInfo, setDebugInfo] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const [directTestError, setDirectTestError] = useState<string | null>(null)
-  const [minimalTestError, setMinimalTestError] = useState<string | null>(null)
-  const [amount, setAmount] = useState("1")
+  const [testResult, setTestResult] = useState<any>(null)
 
-  const handleTest = async () => {
+  const runDebugTest = async () => {
     setIsLoading(true)
     setError(null)
-    setResponse(null)
+    setDebugInfo(null)
+    setTestResult(null)
 
     try {
-      // Create a test payment
-      const response = await fetch("/api/create-phonepe-payment", {
+      // Fetch debug info
+      const debugResponse = await fetch("/api/debug-phonepe")
+      const debugData = await debugResponse.json()
+      setDebugInfo(debugData)
+
+      // Test minimal payment
+      const testResponse = await fetch("/api/test-phonepe-minimal", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          productId: "test-product",
-          productName: "Test Product",
-          amount: Number.parseFloat(amount),
-          customerName: "Test User",
-          customerEmail: "test@example.com",
-          customerPhone: "9876543210",
+          amount: 1, // 1 rupee for testing
         }),
       })
 
-      const data = await response.json()
-      setResponse(data)
-
-      if (data.status === "success" && data.paymentUrl) {
-        // Open the payment URL in a new tab
-        window.open(data.paymentUrl, "_blank")
-      } else {
-        setError(data.error || data.message || "Failed to initiate payment")
-      }
-    } catch (err) {
-      console.error("Test error:", err)
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
+      const testData = await testResponse.json()
+      setTestResult(testData)
+    } catch (error) {
+      console.error("Test error:", error)
+      setError(error instanceof Error ? error.message : "An unknown error occurred")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDirectTest = async () => {
-    setDirectTestLoading(true)
-    setDirectTestError(null)
-    setDirectTestResponse(null)
-
-    try {
-      const response = await fetch("/api/test-phonepe-direct")
-      const data = await response.json()
-      setDirectTestResponse(data)
-
-      if (data.success && data.paymentUrl) {
-        window.open(data.paymentUrl, "_blank")
-      } else {
-        setDirectTestError(data.error || "Failed to initiate direct payment test")
-      }
-    } catch (err) {
-      console.error("Direct test error:", err)
-      setDirectTestError(err instanceof Error ? err.message : "An unknown error occurred")
-    } finally {
-      setDirectTestLoading(false)
-    }
-  }
-
-  const handleMinimalTest = async () => {
-    setMinimalTestLoading(true)
-    setMinimalTestError(null)
-    setMinimalTestResponse(null)
-
-    try {
-      const response = await fetch("/api/test-phonepe-minimal")
-      const data = await response.json()
-      setMinimalTestResponse(data)
-
-      if (data.success && data.paymentUrl) {
-        window.open(data.paymentUrl, "_blank")
-      } else {
-        setMinimalTestError(data.error || "Failed to initiate minimal payment test")
-      }
-    } catch (err) {
-      console.error("Minimal test error:", err)
-      setMinimalTestError(err instanceof Error ? err.message : "An unknown error occurred")
-    } finally {
-      setMinimalTestLoading(false)
-    }
-  }
-
-  const handleDebug = async () => {
-    setDebugLoading(true)
-    try {
-      const response = await fetch("/api/debug-phonepe")
-      const data = await response.json()
-      setDebugInfo(data)
-    } catch (err) {
-      console.error("Debug error:", err)
-    } finally {
-      setDebugLoading(false)
-    }
-  }
-
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">PhonePe Integration Test</h1>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex items-center mb-8">
+        <Button variant="ghost" size="sm" asChild className="mr-4">
+          <Link href="/checkout">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Checkout
+          </Link>
+        </Button>
+        <h1 className="text-3xl font-bold">PhonePe Integration Test</h1>
+      </div>
 
-      <Tabs defaultValue="standard">
-        <TabsList className="mb-4">
-          <TabsTrigger value="standard">Standard Test</TabsTrigger>
-          <TabsTrigger value="direct">Direct API Test</TabsTrigger>
-          <TabsTrigger value="minimal">Minimal Test</TabsTrigger>
-          <TabsTrigger value="debug">Debug</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="standard">
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Test PhonePe Integration</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p>Test the PhonePe integration with a small payment amount.</p>
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount (₹)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
+      <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>PhonePe Integration Diagnostics</CardTitle>
+            <CardDescription>This page helps diagnose issues with the PhonePe payment integration.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md mb-4">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Error</p>
+                    <p className="text-sm">{error}</p>
+                  </div>
+                </div>
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleTest} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Testing...
-                  </>
-                ) : (
-                  "Run Test"
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
+            )}
 
-          {error && (
-            <Card className="mb-4 border-red-500">
-              <CardHeader>
-                <CardTitle className="text-red-500">Error</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{error}</p>
-              </CardContent>
-            </Card>
-          )}
+            <Button onClick={runDebugTest} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Running Tests...
+                </>
+              ) : (
+                "Run Diagnostic Tests"
+              )}
+            </Button>
+          </CardContent>
+          <CardFooter className="flex flex-col items-start">
+            {debugInfo && (
+              <div className="w-full space-y-4">
+                <div>
+                  <h3 className="font-medium mb-2">Environment Variables</h3>
+                  <div className="bg-gray-50 p-3 rounded-md text-sm">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>Merchant ID:</div>
+                      <div>{debugInfo.environment.merchantId}</div>
+                      <div>Salt Key:</div>
+                      <div>{debugInfo.environment.saltKey}</div>
+                      <div>Salt Index:</div>
+                      <div>{debugInfo.environment.saltIndex}</div>
+                      <div>App URL:</div>
+                      <div>{debugInfo.environment.appUrl}</div>
+                      <div>API Key:</div>
+                      <div>✅ Set</div>
+                      <div>Mode:</div>
+                      <div>{debugInfo.mode}</div>
+                    </div>
+                  </div>
+                </div>
 
-          {response && (
-            <Card className="mb-4">
-              <CardHeader>
-                <CardTitle>Payment Response</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-96">
-                  {JSON.stringify(response, null, 2)}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+                <Separator />
 
-        <TabsContent value="direct">
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Direct PhonePe API Test</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>This test bypasses all abstractions and directly calls the PhonePe API with minimal code.</p>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleDirectTest} disabled={directTestLoading}>
-                {directTestLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Testing...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Run Direct Test
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
+                <div>
+                  <h3 className="font-medium mb-2">Test API Call</h3>
+                  <div className="bg-gray-50 p-3 rounded-md text-sm">
+                    <div className="mb-2">
+                      <span className="font-medium">Status: </span>
+                      <span className={debugInfo.testApiCall?.status === "200" ? "text-green-600" : "text-red-600"}>
+                        {debugInfo.testApiCall?.status}
+                      </span>
+                    </div>
+                    <details>
+                      <summary className="cursor-pointer">Response</summary>
+                      <pre className="mt-2 p-2 bg-gray-100 rounded overflow-auto max-h-40 text-xs">
+                        {debugInfo.testApiCall?.response}
+                      </pre>
+                    </details>
+                  </div>
+                </div>
 
-          {directTestError && (
-            <Card className="mb-4 border-red-500">
-              <CardHeader>
-                <CardTitle className="text-red-500">Direct Test Error</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{directTestError}</p>
-              </CardContent>
-            </Card>
-          )}
+                <Separator />
 
-          {directTestResponse && (
-            <Card className="mb-4">
-              <CardHeader>
-                <CardTitle>Direct Test Response</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-96">
-                  {JSON.stringify(directTestResponse, null, 2)}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+                <div>
+                  <h3 className="font-medium mb-2">Headers</h3>
+                  <div className="bg-gray-50 p-3 rounded-md text-sm">
+                    <pre className="overflow-auto max-h-40 text-xs">{JSON.stringify(debugInfo.headers, null, 2)}</pre>
+                  </div>
+                </div>
+              </div>
+            )}
 
-        <TabsContent value="minimal">
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Minimal PhonePe API Test</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>This test uses the absolute minimal approach possible with PhonePe.</p>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleMinimalTest} disabled={minimalTestLoading}>
-                {minimalTestLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Testing...
-                  </>
-                ) : (
-                  <>
-                    <Minimize className="mr-2 h-4 w-4" />
-                    Run Minimal Test
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {minimalTestError && (
-            <Card className="mb-4 border-red-500">
-              <CardHeader>
-                <CardTitle className="text-red-500">Minimal Test Error</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{minimalTestError}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {minimalTestResponse && (
-            <Card className="mb-4">
-              <CardHeader>
-                <CardTitle>Minimal Test Response</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-96">
-                  {JSON.stringify(minimalTestResponse, null, 2)}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="debug">
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Debug Environment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Check environment variables and test checksum generation.</p>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleDebug} disabled={debugLoading} variant="outline">
-                {debugLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <Bug className="mr-2 h-4 w-4" />
-                    Debug Environment
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {debugInfo && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Debug Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-96">
-                  {JSON.stringify(debugInfo, null, 2)}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+            {testResult && (
+              <>
+                <Separator className="my-4" />
+                <div className="w-full">
+                  <h3 className="font-medium mb-2">Minimal Payment Test</h3>
+                  <div className="bg-gray-50 p-3 rounded-md text-sm">
+                    <div className="mb-2">
+                      <span className="font-medium">Status: </span>
+                      <span className={testResult.success ? "text-green-600" : "text-red-600"}>
+                        {testResult.success ? "Success" : "Failed"}
+                      </span>
+                    </div>
+                    {testResult.error && (
+                      <div className="mb-2 text-red-600">
+                        <span className="font-medium">Error: </span>
+                        {testResult.error}
+                      </div>
+                    )}
+                    {testResult.paymentUrl && (
+                      <div className="mb-2">
+                        <span className="font-medium">Payment URL: </span>
+                        <a
+                          href={testResult.paymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 underline"
+                        >
+                          Open Payment Page
+                        </a>
+                      </div>
+                    )}
+                    <details>
+                      <summary className="cursor-pointer">Full Response</summary>
+                      <pre className="mt-2 p-2 bg-gray-100 rounded overflow-auto max-h-40 text-xs">
+                        {JSON.stringify(testResult, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   )
 }

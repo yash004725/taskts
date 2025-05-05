@@ -1,71 +1,78 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 
-// This is a direct test of the PhonePe API with an absolute minimal approach
-export async function GET() {
+// PhonePe API key
+const API_KEY = "5093c394-38c3-4002-9813-d5eb127f1eeb"
+
+export async function POST(request: Request) {
   try {
-    // Only enable in development mode
-    if (process.env.NODE_ENV !== "development") {
-      return NextResponse.json({ message: "Test endpoint disabled in production" }, { status: 403 })
-    }
+    const body = await request.json()
+    const amount = body.amount || 1 // Default to 1 rupee if not specified
 
-    // PhonePe merchant credentials
-    const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || ""
-    const SALT_KEY = process.env.PHONEPE_SALT_KEY || ""
-    const SALT_INDEX = process.env.PHONEPE_SALT_INDEX || "1"
-    const TEST_API_URL = "https://api-preprod.phonepe.com/apis/hermes/pg/v1/pay"
+    // Get merchant credentials from environment variables
+    const merchantId = process.env.PHONEPE_MERCHANT_ID
+    const saltKey = process.env.PHONEPE_SALT_KEY
+    const saltIndex = process.env.PHONEPE_SALT_INDEX || "1"
 
-    // Check if credentials are set
-    if (!MERCHANT_ID || !SALT_KEY) {
+    // Validate credentials
+    if (!merchantId || !saltKey) {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing PhonePe credentials. Please check your environment variables.",
+          error: "Missing merchant credentials. Please check your environment variables.",
         },
         { status: 400 },
       )
     }
 
     // Generate a unique transaction ID
-    const merchantTransactionId = `TEST_${Date.now()}`
+    const merchantTransactionId = `TEST_${Date.now()}_${Math.floor(Math.random() * 1000000)}`
 
     // Base URL for callbacks
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://xdigitalhub.vercel.app"
+    const baseUrl = "https://xdigitalhub.vercel.app"
+    const redirectUrl = `${baseUrl}/payment/phonepe-callback?test=true`
+    const callbackUrl = `${baseUrl}/api/phonepe-webhook`
 
-    // Create a minimal payload - absolute bare minimum
+    // Create a minimal payload
     const payload = {
-      merchantId: MERCHANT_ID,
+      merchantId,
       merchantTransactionId,
-      amount: 100, // 1 rupee in paise
-      redirectUrl: `${baseUrl}/payment/phonepe-callback`,
+      amount: amount * 100, // Convert to paise
+      redirectUrl,
       redirectMode: "REDIRECT",
-      callbackUrl: `${baseUrl}/api/phonepe-webhook`,
-      merchantUserId: `TEST_USER`,
+      callbackUrl,
+      merchantUserId: `TEST_USER_${Date.now()}`,
       paymentInstrument: {
         type: "PAY_PAGE",
       },
     }
 
     // Convert payload to base64
-    const payloadString = JSON.stringify(payload)
-    const payloadBase64 = Buffer.from(payloadString).toString("base64")
+    const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64")
 
     // Generate checksum
-    const string = payloadBase64 + "/pg/v1/pay" + SALT_KEY
+    const string = payloadBase64 + "/pg/v1/pay" + saltKey
     const sha256 = crypto.createHash("sha256").update(string).digest("hex")
-    const checksum = `${sha256}###${SALT_INDEX}`
+    const checksum = `${sha256}###${saltIndex}`
 
-    // Make API request to PhonePe with minimal headers
-    const response = await fetch(TEST_API_URL, {
+    // Make API request to PhonePe
+    const apiUrl = "https://api.phonepe.com/apis/hermes/pg/v1/pay"
+
+    // Create request body
+    const requestBody = {
+      request: payloadBase64,
+    }
+
+    // Make the API call
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-VERIFY": checksum,
         Accept: "application/json",
+        "X-API-KEY": API_KEY,
       },
-      body: JSON.stringify({
-        request: payloadBase64,
-      }),
+      body: JSON.stringify(requestBody),
     })
 
     // Get response as text first for logging
@@ -86,19 +93,51 @@ export async function GET() {
       )
     }
 
-    // Return the complete test results
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: data.message || data.error || `API error: ${response.status}`,
+          code: data.code,
+          rawResponse: data,
+        },
+        { status: response.status },
+      )
+    }
+
+    // Check for specific error codes in the response
+    if (data.code !== "PAYMENT_INITIATED" && data.code !== "SUCCESS") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: data.message || `Payment not initiated: ${data.code}`,
+          code: data.code,
+          rawResponse: data,
+        },
+        { status: 400 },
+      )
+    }
+
+    // Ensure the redirect URL is present
+    if (!data.data?.instrumentResponse?.redirectInfo?.url) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Payment gateway did not return a redirect URL",
+          rawResponse: data,
+        },
+        { status: 400 },
+      )
+    }
+
     return NextResponse.json({
-      success: response.ok,
-      status: response.status,
-      payload,
-      payloadBase64,
-      checksum,
-      response: data,
+      success: true,
+      paymentUrl: data.data.instrumentResponse.redirectInfo.url,
       merchantTransactionId,
-      paymentUrl: data.data?.instrumentResponse?.redirectInfo?.url || null,
+      rawResponse: data,
     })
   } catch (error) {
-    console.error("Minimal PhonePe test error:", error)
+    console.error("Test payment error:", error)
     return NextResponse.json(
       {
         success: false,
