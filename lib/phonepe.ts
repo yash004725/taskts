@@ -20,9 +20,6 @@ const PROD_STATUS_URL = "https://api.phonepe.com/apis/hermes/pg/v1/status"
 const getApiUrl = () => (USE_PRODUCTION ? PROD_API_URL : TEST_API_URL)
 const getStatusUrl = () => (USE_PRODUCTION ? PROD_STATUS_URL : TEST_STATUS_URL)
 
-// Base URL for callbacks
-const BASE_URL = "https://xdigitalhub.vercel.app"
-
 export interface PhonePePaymentOptions {
   merchantTransactionId: string
   amount: number
@@ -40,8 +37,6 @@ function generateSHA256(input: string): string {
 
 export async function initiatePhonePePayment(options: PhonePePaymentOptions) {
   try {
-    console.log("Starting PhonePe payment initiation with options:", JSON.stringify(options, null, 2))
-
     // Validate credentials
     if (!MERCHANT_ID) {
       console.error("Missing PHONEPE_MERCHANT_ID environment variable")
@@ -59,17 +54,13 @@ export async function initiatePhonePePayment(options: PhonePePaymentOptions) {
       }
     }
 
-    console.log("Using merchant ID:", MERCHANT_ID)
-    console.log("Using API URL:", getApiUrl())
-    console.log("Using production mode:", USE_PRODUCTION ? "Yes" : "No")
-
     const { merchantTransactionId, amount, merchantUserId, redirectUrl, callbackUrl, mobileNumber, email } = options
 
     // Convert amount to paise (multiply by 100) and ensure it's an integer
     const amountInPaise = Math.round(amount * 100)
 
     // Create payload according to PhonePe's documentation
-    const payload = {
+    const payload: Record<string, any> = {
       merchantId: MERCHANT_ID,
       merchantTransactionId,
       amount: amountInPaise,
@@ -83,44 +74,30 @@ export async function initiatePhonePePayment(options: PhonePePaymentOptions) {
     }
 
     // Add optional fields if provided
-    const fullPayload = { ...payload }
     if (mobileNumber) {
-      fullPayload.mobileNumber = mobileNumber
+      payload.mobileNumber = mobileNumber
     }
     if (email) {
-      fullPayload.email = email
+      payload.email = email
     }
 
-    console.log("PhonePe payload:", JSON.stringify(fullPayload, null, 2))
-
     // Convert payload to base64
-    const payloadString = JSON.stringify(fullPayload)
+    const payloadString = JSON.stringify(payload)
     const payloadBase64 = Buffer.from(payloadString).toString("base64")
-    console.log("Payload Base64:", payloadBase64)
 
     // Generate checksum - EXACTLY as per PhonePe documentation
     const string = payloadBase64 + "/pg/v1/pay" + SALT_KEY
-    console.log("String for checksum:", string)
-
     const sha256 = generateSHA256(string)
-    console.log("Generated SHA256:", sha256)
-
     const checksum = `${sha256}###${SALT_INDEX}`
-    console.log("Final checksum:", checksum)
-
-    // Make API request to PhonePe
-    console.log("Making request to PhonePe API:", getApiUrl())
 
     // Create the request body exactly as specified in PhonePe docs
     const requestBody = {
       request: payloadBase64,
     }
 
-    console.log("Request body:", JSON.stringify(requestBody, null, 2))
-
     // Make the API call with proper headers
     // Note: PhonePe API expects specific headers in a specific format
-    const headers = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "X-VERIFY": checksum,
       Accept: "application/json",
@@ -131,19 +108,14 @@ export async function initiatePhonePePayment(options: PhonePePaymentOptions) {
       headers["X-API-KEY"] = API_KEY
     }
 
-    console.log("Request headers:", JSON.stringify(headers, null, 2))
-
     const response = await fetch(getApiUrl(), {
       method: "POST",
       headers,
       body: JSON.stringify(requestBody),
     })
 
-    console.log("PhonePe API response status:", response.status)
-
     // Get response as text first for logging
     const responseText = await response.text()
-    console.log("PhonePe API response text:", responseText)
 
     // Parse the response as JSON
     let data
@@ -157,8 +129,6 @@ export async function initiatePhonePePayment(options: PhonePePaymentOptions) {
         rawResponse: responseText,
       }
     }
-
-    console.log("PhonePe API response data:", JSON.stringify(data, null, 2))
 
     if (!response.ok) {
       console.error("PhonePe API returned error status:", response.status)
@@ -208,8 +178,6 @@ export async function initiatePhonePePayment(options: PhonePePaymentOptions) {
 
 export async function verifyPhonePePayment(merchantTransactionId: string) {
   try {
-    console.log("Starting PhonePe payment verification for transaction:", merchantTransactionId)
-
     // Validate credentials
     if (!MERCHANT_ID || !SALT_KEY) {
       console.error("Missing PhonePe merchant credentials")
@@ -227,12 +195,8 @@ export async function verifyPhonePePayment(merchantTransactionId: string) {
     const sha256 = generateSHA256(string)
     const checksum = `${sha256}###${SALT_INDEX}`
 
-    console.log("PhonePe verification URL:", checkUrl)
-    console.log("String for verification checksum:", string)
-    console.log("PhonePe verification checksum:", checksum)
-
     // Prepare headers for verification request
-    const headers = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "X-VERIFY": checksum,
       Accept: "application/json",
@@ -248,11 +212,8 @@ export async function verifyPhonePePayment(merchantTransactionId: string) {
       headers,
     })
 
-    console.log("PhonePe verification response status:", response.status)
-
     // Get response as text first for logging
     const responseText = await response.text()
-    console.log("PhonePe verification response text:", responseText)
 
     // Parse the response as JSON
     let data
@@ -267,8 +228,6 @@ export async function verifyPhonePePayment(merchantTransactionId: string) {
         rawResponse: responseText,
       }
     }
-
-    console.log("PhonePe verification response data:", JSON.stringify(data, null, 2))
 
     if (!response.ok) {
       console.error("PhonePe verification API returned error status:", response.status)

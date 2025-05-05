@@ -96,17 +96,17 @@ export default function PhonePeTestPage() {
                   <div className="bg-gray-50 p-3 rounded-md text-sm">
                     <div className="grid grid-cols-2 gap-2">
                       <div>Merchant ID:</div>
-                      <div>{debugInfo.environment.merchantId}</div>
+                      <div>{debugInfo.environment?.merchantId || "Not available"}</div>
                       <div>Salt Key:</div>
-                      <div>{debugInfo.environment.saltKey}</div>
+                      <div>{debugInfo.environment?.saltKey || "Not available"}</div>
                       <div>Salt Index:</div>
-                      <div>{debugInfo.environment.saltIndex}</div>
+                      <div>{debugInfo.environment?.saltIndex || "Not available"}</div>
                       <div>App URL:</div>
-                      <div>{debugInfo.environment.appUrl}</div>
+                      <div>{debugInfo.environment?.appUrl || "Not available"}</div>
                       <div>API Key:</div>
-                      <div>✅ Set</div>
+                      <div>{debugInfo.apiKey || "Not available"}</div>
                       <div>Mode:</div>
-                      <div>{debugInfo.mode}</div>
+                      <div>{debugInfo.mode || "Not available"}</div>
                     </div>
                   </div>
                 </div>
@@ -119,13 +119,13 @@ export default function PhonePeTestPage() {
                     <div className="mb-2">
                       <span className="font-medium">Status: </span>
                       <span className={debugInfo.testApiCall?.status === "200" ? "text-green-600" : "text-red-600"}>
-                        {debugInfo.testApiCall?.status}
+                        {debugInfo.testApiCall?.status || "Not available"}
                       </span>
                     </div>
                     <details>
                       <summary className="cursor-pointer">Response</summary>
                       <pre className="mt-2 p-2 bg-gray-100 rounded overflow-auto max-h-40 text-xs">
-                        {debugInfo.testApiCall?.response}
+                        {debugInfo.testApiCall?.response || "No response data"}
                       </pre>
                     </details>
                   </div>
@@ -136,7 +136,9 @@ export default function PhonePeTestPage() {
                 <div>
                   <h3 className="font-medium mb-2">Headers</h3>
                   <div className="bg-gray-50 p-3 rounded-md text-sm">
-                    <pre className="overflow-auto max-h-40 text-xs">{JSON.stringify(debugInfo.headers, null, 2)}</pre>
+                    <pre className="overflow-auto max-h-40 text-xs">
+                      {JSON.stringify(debugInfo.headers || {}, null, 2)}
+                    </pre>
                   </div>
                 </div>
               </div>

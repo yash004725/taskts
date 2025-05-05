@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     // Get environment variables
     const merchantId = process.env.PHONEPE_MERCHANT_ID || "MISSING"
@@ -11,27 +11,41 @@ export async function GET(request: Request) {
     const apiKey = "5093c394-38c3-4002-9813-d5eb127f1eeb"
 
     // Test checksum generation
-    const testPayload = {
-      merchantId: merchantId,
-      merchantTransactionId: "TEST_TXN_123",
-      amount: 10000, // 100 rupees in paise
-      redirectUrl: `${appUrl}/payment/callback`,
-      redirectMode: "REDIRECT",
-      callbackUrl: `${appUrl}/api/phonepe-webhook`,
-      merchantUserId: "GUEST_123",
-      paymentInstrument: {
-        type: "PAY_PAGE",
-      },
+    let checksumTest = "Not tested"
+    let testPayload = null
+    let payloadBase64 = ""
+    let string = ""
+    let sha256 = ""
+    let checksum = ""
+
+    try {
+      if (merchantId !== "MISSING" && saltKey !== "MISSING") {
+        testPayload = {
+          merchantId: merchantId,
+          merchantTransactionId: "TEST_TXN_123",
+          amount: 10000,
+          redirectUrl: `${appUrl}/payment/callback`,
+          redirectMode: "REDIRECT",
+          callbackUrl: `${appUrl}/api/phonepe-webhook`,
+          merchantUserId: "GUEST_123",
+          paymentInstrument: {
+            type: "PAY_PAGE",
+          },
+        }
+
+        // Convert payload to base64
+        const payloadString = JSON.stringify(testPayload)
+        payloadBase64 = Buffer.from(payloadString).toString("base64")
+
+        // Generate checksum
+        string = payloadBase64 + "/pg/v1/pay" + saltKey
+        sha256 = crypto.createHash("sha256").update(string).digest("hex")
+        checksum = `${sha256}###${saltIndex}`
+        checksumTest = "Success"
+      }
+    } catch (error) {
+      checksumTest = `Error: ${error instanceof Error ? error.message : "Unknown error"}`
     }
-
-    // Convert payload to base64
-    const payloadString = JSON.stringify(testPayload)
-    const payloadBase64 = Buffer.from(payloadString).toString("base64")
-
-    // Generate checksum
-    const string = payloadBase64 + "/pg/v1/pay" + saltKey
-    const sha256 = crypto.createHash("sha256").update(string).digest("hex")
-    const checksum = `${sha256}###${saltIndex}`
 
     // Test API call with minimal request
     let testApiResponse = "Not tested"
@@ -73,12 +87,12 @@ export async function GET(request: Request) {
         appUrl,
       },
       testChecksum: {
-        payloadBase64: payloadBase64.substring(0, 50) + "...", // Truncate for security
-        checksumString: string.substring(0, 50) + "...", // Truncate for security
-        sha256: sha256,
+        checksumTest,
+        payloadBase64: payloadBase64 ? payloadBase64.substring(0, 20) + "..." : "",
+        sha256,
         checksum,
       },
-      apiKey: apiKey,
+      apiKey: "✅ Set",
       mode: "PRODUCTION",
       testApiCall: {
         status: testApiStatus,
