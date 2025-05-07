@@ -130,6 +130,14 @@ export default function Home() {
                   Watch Preview <Play className="ml-2 h-5 w-5" />
                 </Button>
               </div>
+              <div className="flex gap-4 mt-6">
+                <Button size="lg" asChild>
+                  <Link href="/buy-now">Buy Now - ₹249 Only</Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild>
+                  <Link href="/about">Learn More</Link>
+                </Button>
+              </div>
             </motion.div>
             <motion.div
               className="flex justify-center"

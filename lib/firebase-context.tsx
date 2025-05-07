@@ -1,95 +1,52 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app"
-import { getAuth, type Auth } from "firebase/auth"
-import { getFirestore, type Firestore } from "firebase/firestore"
-import { getStorage, type FirebaseStorage } from "firebase/storage"
-import { getAnalytics } from "firebase/analytics"
+import { initializeApp, getApps, getApp } from "firebase/app"
+import { getFirestore } from "firebase/firestore"
+import { getAuth } from "firebase/auth"
+import { getStorage } from "firebase/storage"
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBE-dDeaaY_sDnECh2PmvA0LZqfJWxbfns",
-  authDomain: "digital-hub-2d410.firebaseapp.com",
-  projectId: "digital-hub-2d410",
-  storageBucket: "digital-hub-2d410.firebasestorage.app",
-  messagingSenderId: "1007810821342",
-  appId: "1:1007810821342:web:b729416b526e184d30164f",
-  measurementId: "G-F521D2S2KF",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 }
 
-// Initialize Firebase if it hasn't been initialized yet
-let app: FirebaseApp | undefined
-let auth: Auth | undefined
-let db: Firestore | undefined
-let storage: FirebaseStorage | undefined
-let analytics: any | undefined
+// Initialize Firebase
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp()
+const db = getFirestore(app)
+const auth = getAuth(app)
+const storage = getStorage(app)
 
-try {
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig)
-    auth = getAuth(app)
-    db = getFirestore(app)
-    storage = getStorage(app)
-    // Only initialize analytics on the client side
-    if (typeof window !== "undefined") {
-      analytics = getAnalytics(app)
-    }
-  } else {
-    app = getApps()[0]
-    auth = getAuth(app)
-    db = getFirestore(app)
-    storage = getStorage(app)
-    // Only initialize analytics on the client side
-    if (typeof window !== "undefined") {
-      analytics = getAnalytics(app)
-    }
-  }
-} catch (error) {
-  console.error("Firebase initialization error:", error)
-}
-
-// Context type
 type FirebaseContextType = {
-  app: FirebaseApp | undefined
-  auth: Auth | undefined
-  db: Firestore | undefined
-  storage: FirebaseStorage | undefined
-  analytics: any | undefined
-  isInitialized: boolean
+  app: ReturnType<typeof getApp>
+  db: ReturnType<typeof getFirestore>
+  auth: ReturnType<typeof getAuth>
+  storage: ReturnType<typeof getStorage>
 }
 
-// Create context
-const FirebaseContext = createContext<FirebaseContextType>({
-  app: undefined,
-  auth: undefined,
-  db: undefined,
-  storage: undefined,
-  analytics: undefined,
-  isInitialized: false,
-})
+const FirebaseContext = createContext<FirebaseContextType | null>(null)
 
-// Provider component
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
-    // Check if Firebase is initialized
-    if (app && auth && db && storage) {
-      setIsInitialized(true)
-    }
+    setIsInitialized(true)
   }, [])
 
-  return (
-    <FirebaseContext.Provider value={{ app, auth, db, storage, analytics, isInitialized }}>
-      {children}
-    </FirebaseContext.Provider>
-  )
+  if (!isInitialized) {
+    return null
+  }
+
+  return <FirebaseContext.Provider value={{ app, db, auth, storage }}>{children}</FirebaseContext.Provider>
 }
 
-// Custom hook to use the Firebase context
 export function useFirebase() {
   const context = useContext(FirebaseContext)
   if (!context) {

@@ -5,28 +5,21 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Format a price in cents to a currency string
+ */
 export function formatPrice(price: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
+    minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(price)
 }
 
-export function getDiscountPercentage(originalPrice: number, currentPrice: number): number {
-  if (!originalPrice || originalPrice <= currentPrice) return 0
-  return Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
-}
-
-export function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim()
-}
-
+/**
+ * Truncate text to a specified length and add ellipsis
+ */
 export function truncateText(text: string, maxLength: number): string {
   if (!text) return ""
   if (text.length <= maxLength) return text

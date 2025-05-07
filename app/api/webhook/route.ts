@@ -5,15 +5,12 @@ export async function POST(request: Request) {
     const body = await request.json()
 
     // Log webhook data
-    console.log("PhonePe webhook received:", JSON.stringify(body))
-
-    // Process webhook data
-    // Here you would typically update your database with payment status
+    console.log("Webhook received:", JSON.stringify(body))
 
     // Return success
     return NextResponse.json({ status: "success" })
   } catch (error) {
-    console.error("PhonePe webhook error:", error)
+    console.error("Webhook error:", error)
     return NextResponse.json({ status: "error" }, { status: 500 })
   }
 }

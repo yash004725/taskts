@@ -60,8 +60,8 @@
     "zod": "^3.24.1",
     "@emotion/is-prop-valid": "latest",
     "firebase": "latest",
-    "firebase-admin": "latest",
     "framer-motion": "latest",
+    "firebase-admin": "latest",
     "crypto": "latest"
   },
   "devDependencies": {

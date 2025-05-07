@@ -1,85 +1,46 @@
 import { NextResponse } from "next/server"
 import { verifyPhonePePayment } from "@/lib/phonepe"
-import { db } from "@/lib/firebase-config"
-import { doc, getDoc, updateDoc, serverTimestamp, collection, addDoc } from "firebase/firestore"
 
 export async function GET(request: Request) {
   try {
+    console.log("Payment verification request received")
+
+    // Get merchantTransactionId from query parameters
     const url = new URL(request.url)
-    const paymentId = url.searchParams.get("paymentId")
+    const merchantTransactionId = url.searchParams.get("merchantTransactionId")
+    console.log("merchantTransactionId:", merchantTransactionId)
 
-    if (!paymentId) {
-      return NextResponse.json({ success: false, message: "Missing payment ID" }, { status: 400 })
+    if (!merchantTransactionId) {
+      console.error("Missing merchantTransactionId in request")
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing merchantTransactionId",
+        },
+        { status: 400 },
+      )
     }
 
-    // Get the payment details from Firestore
-    const paymentDoc = await getDoc(doc(db, "payments", paymentId))
+    // Verify payment
+    console.log("Verifying payment with PhonePe")
+    const result = await verifyPhonePePayment(merchantTransactionId)
+    console.log("Verification result:", result)
 
-    if (!paymentDoc.exists()) {
-      return NextResponse.json({ success: false, message: "Payment not found" }, { status: 404 })
-    }
-
-    const paymentData = paymentDoc.data()
-    const merchantTransactionId = paymentData.merchantTransactionId
-
-    // Verify with PhonePe API
-    const verificationResult = await verifyPhonePePayment(merchantTransactionId)
-    console.log("PhonePe verification result:", verificationResult)
-
-    if (verificationResult.success && verificationResult.paymentSuccess) {
-      // Update payment status in Firestore
-      await updateDoc(doc(db, "payments", paymentId), {
-        status: "COMPLETED",
-        transactionId: verificationResult.transactionId,
-        paymentState: verificationResult.paymentState,
-        responseCode: verificationResult.responseCode,
-        updatedAt: serverTimestamp(),
-      })
-
-      // Create a purchase record
-      const purchaseRef = await addDoc(collection(db, "purchases"), {
-        userId: paymentData.userId,
-        userEmail: paymentData.userEmail,
-        productId: paymentData.productId,
-        productName: paymentData.productName,
-        amount: paymentData.amount,
-        paymentId: paymentId,
-        transactionId: verificationResult.transactionId,
-        purchaseDate: serverTimestamp(),
-      })
-
-      return NextResponse.json({
-        success: true,
-        paymentSuccess: true,
-        message: "Payment verified successfully",
-        orderId: purchaseRef.id,
-        amount: paymentData.amount,
-      })
-    } else if (verificationResult.success) {
-      // Payment was found but not successful
-      await updateDoc(doc(db, "payments", paymentId), {
-        status: "FAILED",
-        paymentState: verificationResult.paymentState,
-        responseCode: verificationResult.responseCode,
-        updatedAt: serverTimestamp(),
-      })
-
-      return NextResponse.json({
-        success: true,
-        paymentSuccess: false,
-        message: "Payment was not successful",
-      })
-    } else {
-      // Error verifying payment
-      return NextResponse.json({
-        success: false,
-        paymentSuccess: false,
-        message: "Error verifying payment with PhonePe",
-        error: verificationResult.error,
-      })
-    }
+    return NextResponse.json({
+      success: result.success,
+      paymentSuccess: result.paymentSuccess,
+      data: result.data,
+      code: result.code,
+      error: result.error,
+    })
   } catch (error) {
-    console.error("Error verifying payment:", error)
-    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 })
+    console.error("Payment verification API error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Server error",
+      },
+      { status: 500 },
+    )
   }
 }

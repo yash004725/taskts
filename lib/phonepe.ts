@@ -1,123 +1,107 @@
-// PhonePe Integration Service
 import crypto from "crypto"
 
-// PhonePe merchant credentials
-const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || ""
-const SALT_KEY = process.env.PHONEPE_SALT_KEY || ""
+// PhonePe merchant credentials - using the provided values
+const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || "PGTESTPAYUAT"
+const API_KEY = "5093c394-38c3-4002-9813-d5eb127f1eeb" // Using the provided API key
+const SALT_KEY = "5093c394-38c3-4002-9813-d5eb127f1eeb" // Using the provided salt key
 const SALT_INDEX = process.env.PHONEPE_SALT_INDEX || "1"
-const API_KEY = "5093c394-38c3-4002-9813-d5eb127f1eeb" // Production API key
 
-// Use production endpoints since this is a real API key
-const USE_PRODUCTION = true
+// Base URL for callbacks
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://xdigitalhub.vercel.app"
 
-// API endpoints
-const TEST_API_URL = "https://api-preprod.phonepe.com/apis/hermes/pg/v1/pay"
-const TEST_STATUS_URL = "https://api-preprod.phonepe.com/apis/hermes/pg/v1/status"
-const PROD_API_URL = "https://api.phonepe.com/apis/hermes/pg/v1/pay"
-const PROD_STATUS_URL = "https://api.phonepe.com/apis/hermes/pg/v1/status"
-
-// Get the actual URLs based on environment
-const getApiUrl = () => (USE_PRODUCTION ? PROD_API_URL : TEST_API_URL)
-const getStatusUrl = () => (USE_PRODUCTION ? PROD_STATUS_URL : TEST_STATUS_URL)
-
-export interface PhonePePaymentOptions {
-  merchantTransactionId: string
-  amount: number
-  merchantUserId: string
-  redirectUrl: string
-  callbackUrl: string
-  mobileNumber?: string
-  email?: string
-}
+// API endpoints for production
+const API_URL = "https://api.phonepe.com/apis/hermes/pg/v1/pay"
+const STATUS_URL = "https://api.phonepe.com/apis/hermes/pg/v1/status"
 
 // Function to generate SHA-256 hash
 function generateSHA256(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex")
 }
 
-export async function initiatePhonePePayment(options: PhonePePaymentOptions) {
+// Function to initiate PhonePe payment
+export async function initiatePhonePePayment(options: {
+  amount: number
+  userId?: string
+  productName?: string
+  mobile?: string
+  email?: string
+}) {
   try {
-    // Validate credentials
-    if (!MERCHANT_ID) {
-      console.error("Missing PHONEPE_MERCHANT_ID environment variable")
-      return {
-        success: false,
-        error: "Missing merchant ID. Please check your environment variables.",
-      }
-    }
+    console.log("Initiating PhonePe payment with options:", options)
 
-    if (!SALT_KEY) {
-      console.error("Missing PHONEPE_SALT_KEY environment variable")
-      return {
-        success: false,
-        error: "Missing salt key. Please check your environment variables.",
-      }
-    }
+    // Generate a unique transaction ID
+    const merchantTransactionId = `TXN_${Date.now()}_${Math.floor(Math.random() * 1000000)}`
+    console.log("Generated transaction ID:", merchantTransactionId)
 
-    const { merchantTransactionId, amount, merchantUserId, redirectUrl, callbackUrl, mobileNumber, email } = options
+    // Convert amount to paise (multiply by 100)
+    const amountInPaise = Math.round(options.amount * 100)
+    console.log("Amount in paise:", amountInPaise)
 
-    // Convert amount to paise (multiply by 100) and ensure it's an integer
-    const amountInPaise = Math.round(amount * 100)
+    // Callback URLs
+    const redirectUrl = `${BASE_URL}/payment/callback?merchantTransactionId=${merchantTransactionId}`
+    const callbackUrl = `${BASE_URL}/api/phonepe-webhook`
+    console.log("Redirect URL:", redirectUrl)
+    console.log("Callback URL:", callbackUrl)
 
-    // Create payload according to PhonePe's documentation
-    const payload: Record<string, any> = {
+    // Create payload object
+    const payload = {
       merchantId: MERCHANT_ID,
-      merchantTransactionId,
+      merchantTransactionId: merchantTransactionId,
+      merchantUserId: options.userId || `USER_${Date.now()}`,
       amount: amountInPaise,
-      redirectUrl,
+      redirectUrl: redirectUrl,
       redirectMode: "REDIRECT",
-      callbackUrl,
-      merchantUserId,
+      callbackUrl: callbackUrl,
+      mobileNumber: options.mobile,
       paymentInstrument: {
         type: "PAY_PAGE",
       },
     }
 
     // Add optional fields if provided
-    if (mobileNumber) {
-      payload.mobileNumber = mobileNumber
+    if (options.email) {
+      payload.email = options.email
     }
-    if (email) {
-      payload.email = email
-    }
+
+    console.log("Payment payload:", JSON.stringify(payload, null, 2))
 
     // Convert payload to base64
-    const payloadString = JSON.stringify(payload)
-    const payloadBase64 = Buffer.from(payloadString).toString("base64")
+    const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64")
+    console.log("Base64 payload:", payloadBase64)
 
-    // Generate checksum - EXACTLY as per PhonePe documentation
+    // Generate checksum
     const string = payloadBase64 + "/pg/v1/pay" + SALT_KEY
     const sha256 = generateSHA256(string)
     const checksum = `${sha256}###${SALT_INDEX}`
+    console.log("Generated checksum:", checksum)
 
-    // Create the request body exactly as specified in PhonePe docs
+    // Create request body
     const requestBody = {
       request: payloadBase64,
     }
 
-    // Make the API call with proper headers
-    // Note: PhonePe API expects specific headers in a specific format
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-VERIFY": checksum,
-      Accept: "application/json",
-    }
+    console.log("Request body:", JSON.stringify(requestBody, null, 2))
 
-    // Only add API key if we're using production mode
-    if (USE_PRODUCTION) {
-      headers["X-API-KEY"] = API_KEY
-    }
-
-    const response = await fetch(getApiUrl(), {
+    // Make API request
+    console.log("Making API request to:", API_URL)
+    const response = await fetch(API_URL, {
       method: "POST",
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+        "X-VERIFY": checksum,
+        "X-API-KEY": API_KEY,
+      },
       body: JSON.stringify(requestBody),
     })
 
+    // Log response status
+    console.log("PhonePe API response status:", response.status)
+
     // Get response as text first for logging
     const responseText = await response.text()
+    console.log("PhonePe API response text:", responseText)
 
-    // Parse the response as JSON
+    // Parse response as JSON
     let data
     try {
       data = JSON.parse(responseText)
@@ -130,92 +114,76 @@ export async function initiatePhonePePayment(options: PhonePePaymentOptions) {
       }
     }
 
-    if (!response.ok) {
-      console.error("PhonePe API returned error status:", response.status)
+    // Check for success
+    if (data.success && data.code === "PAYMENT_INITIATED") {
+      // Extract payment URL
+      const paymentUrl = data.data?.instrumentResponse?.redirectInfo?.url
+      if (!paymentUrl) {
+        console.error("Payment URL not found in response:", data)
+        return {
+          success: false,
+          error: "Payment URL not found in response",
+          rawResponse: data,
+        }
+      }
+
+      return {
+        success: true,
+        url: paymentUrl,
+        merchantTransactionId: merchantTransactionId,
+      }
+    } else {
+      console.error("PhonePe payment initiation failed:", data)
       return {
         success: false,
-        error: data.message || data.error || `API error: ${response.status}`,
+        error: data.message || data.error || "Payment initiation failed",
         code: data.code,
         rawResponse: data,
       }
-    }
-
-    // Check for specific error codes in the response
-    if (data.code !== "PAYMENT_INITIATED" && data.code !== "SUCCESS") {
-      console.error("PhonePe payment not initiated:", data.code, data.message)
-      return {
-        success: false,
-        error: data.message || `Payment not initiated: ${data.code}`,
-        code: data.code,
-        rawResponse: data,
-      }
-    }
-
-    // Ensure the redirect URL is present
-    if (!data.data?.instrumentResponse?.redirectInfo?.url) {
-      console.error("PhonePe response missing redirect URL:", data)
-      return {
-        success: false,
-        error: "Payment gateway did not return a redirect URL",
-        rawResponse: data,
-      }
-    }
-
-    return {
-      success: true,
-      paymentUrl: data.data.instrumentResponse.redirectInfo.url,
-      merchantTransactionId,
-      rawResponse: data,
     }
   } catch (error) {
-    console.error("PhonePe payment initiation error:", error)
+    console.error("PhonePe payment error:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred",
+      error: error instanceof Error ? error.message : "An error occurred while processing payment",
     }
   }
 }
 
+// Function to verify PhonePe payment
 export async function verifyPhonePePayment(merchantTransactionId: string) {
   try {
-    // Validate credentials
-    if (!MERCHANT_ID || !SALT_KEY) {
-      console.error("Missing PhonePe merchant credentials")
-      return {
-        success: false,
-        paymentSuccess: false,
-        error: "Missing merchant credentials. Please check your environment variables.",
-      }
-    }
+    console.log("Verifying PhonePe payment for transaction ID:", merchantTransactionId)
 
-    const checkUrl = `${getStatusUrl()}/${MERCHANT_ID}/${merchantTransactionId}`
+    // Generate URL for status check
+    const statusUrl = `${STATUS_URL}/${MERCHANT_ID}/${merchantTransactionId}`
+    console.log("Status URL:", statusUrl)
 
     // Generate checksum for verification
     const string = `/pg/v1/status/${MERCHANT_ID}/${merchantTransactionId}${SALT_KEY}`
     const sha256 = generateSHA256(string)
     const checksum = `${sha256}###${SALT_INDEX}`
+    console.log("Generated verification checksum:", checksum)
 
-    // Prepare headers for verification request
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-VERIFY": checksum,
-      Accept: "application/json",
-    }
-
-    // Only add API key if we're using production mode
-    if (USE_PRODUCTION) {
-      headers["X-API-KEY"] = API_KEY
-    }
-
-    const response = await fetch(checkUrl, {
+    // Make API request
+    console.log("Making verification API request")
+    const response = await fetch(statusUrl, {
       method: "GET",
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+        "X-VERIFY": checksum,
+        "X-API-KEY": API_KEY,
+      },
     })
+
+    // Log response status
+    console.log("PhonePe verification API response status:", response.status)
 
     // Get response as text first for logging
     const responseText = await response.text()
+    console.log("PhonePe verification API response text:", responseText)
 
-    // Parse the response as JSON
+    // Parse response as JSON
     let data
     try {
       data = JSON.parse(responseText)
@@ -229,34 +197,31 @@ export async function verifyPhonePePayment(merchantTransactionId: string) {
       }
     }
 
-    if (!response.ok) {
-      console.error("PhonePe verification API returned error status:", response.status)
+    // Check for success
+    if (data.success) {
+      const paymentSuccess = data.code === "PAYMENT_SUCCESS"
+      return {
+        success: true,
+        paymentSuccess: paymentSuccess,
+        data: data.data,
+        code: data.code,
+      }
+    } else {
+      console.error("PhonePe payment verification failed:", data)
       return {
         success: false,
         paymentSuccess: false,
-        error: data.message || `API error: ${response.status}`,
+        error: data.message || "Payment verification failed",
+        code: data.code,
         rawResponse: data,
       }
-    }
-
-    // Check payment status
-    const paymentSuccess = data.code === "PAYMENT_SUCCESS" || (data.data && data.data.responseCode === "SUCCESS")
-
-    return {
-      success: true,
-      paymentSuccess,
-      transactionId: data.data?.transactionId || "",
-      amount: data.data?.amount ? data.data.amount / 100 : 0, // Convert from paise to rupees
-      paymentState: data.data?.state || "",
-      responseCode: data.data?.responseCode || "",
-      rawResponse: data,
     }
   } catch (error) {
     console.error("PhonePe payment verification error:", error)
     return {
       success: false,
       paymentSuccess: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred",
+      error: error instanceof Error ? error.message : "An error occurred while verifying payment",
     }
   }
 }

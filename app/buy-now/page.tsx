@@ -2,8 +2,7 @@
 
 import type React from "react"
 
-import { useState, type FormEvent } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,94 +11,78 @@ import { Separator } from "@/components/ui/separator"
 import { ShieldCheck, Loader2 } from "lucide-react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import { useToast } from "@/components/ui/use-toast"
-import Image from "next/image"
 
 export default function BuyNowPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
   })
-  const { toast } = useToast()
-  const router = useRouter()
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    })
   }
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
     try {
       // Validate form
       if (!formData.name || !formData.email || !formData.phone) {
-        toast({
-          title: "Error",
-          description: "Please fill in all required fields",
-          variant: "destructive",
-        })
+        setError("Please fill in all required fields")
         setIsLoading(false)
         return
       }
 
-      // Create payment with PhonePe
-      const response = await fetch("/api/payment/create", {
+      // Create payment
+      const response = await fetch("/api/create-phonepe-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          productId: "3d-animation-course",
-          productName: "Complete 3D Animation Course",
-          amount: 249,
-          customerName: formData.name,
-          customerEmail: formData.email,
-          customerPhone: formData.phone,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
         }),
       })
 
       const data = await response.json()
-      console.log("Payment initiation response:", data)
 
-      if (data.success && data.paymentUrl) {
-        // Redirect to PhonePe payment page
-        window.location.href = data.paymentUrl
+      if (data.success && data.url) {
+        // Redirect to payment page
+        window.location.href = data.url
       } else {
-        throw new Error(data.message || data.error || "Failed to initiate payment")
+        setError(data.error || "Payment initiation failed. Please try again.")
       }
-    } catch (error) {
-      console.error("Payment error:", error)
-      toast({
-        title: "Payment Error",
-        description: error instanceof Error ? error.message : "An error occurred during payment",
-        variant: "destructive",
-      })
+    } catch (err) {
+      setError("An error occurred. Please try again.")
+      console.error("Payment error:", err)
+    } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <main className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
-      <div className="container mx-auto px-4 md:px-6 py-8">
+      <div className="flex-1 container mx-auto py-10 px-4">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-center mb-8">Complete 3D Animation Course</h1>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Product Info */}
             <div>
-              <div className="relative aspect-video w-full mb-4 rounded-lg overflow-hidden">
-                <Image
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-qdRqPXkVuHQuUIQcUuvWg3sTblCE2C.png"
-                  alt="3D Animation Course"
-                  fill
-                  className="object-cover"
-                />
+              <div className="relative aspect-video w-full mb-4 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
+                <p className="text-gray-500">Course Preview Image</p>
               </div>
 
               <div className="space-y-4">
@@ -187,7 +170,7 @@ export default function BuyNowPage() {
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name</Label>
-                      <Input id="name" name="name" value={formData.name} onChange={handleInputChange} required />
+                      <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
@@ -196,7 +179,7 @@ export default function BuyNowPage() {
                         name="email"
                         type="email"
                         value={formData.email}
-                        onChange={handleInputChange}
+                        onChange={handleChange}
                         required
                       />
                     </div>
@@ -207,7 +190,7 @@ export default function BuyNowPage() {
                         name="phone"
                         type="tel"
                         value={formData.phone}
-                        onChange={handleInputChange}
+                        onChange={handleChange}
                         required
                       />
                     </div>
@@ -227,6 +210,10 @@ export default function BuyNowPage() {
                         <span>₹249</span>
                       </div>
                     </div>
+
+                    {error && (
+                      <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-md text-sm">{error}</div>
+                    )}
                   </form>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-4">
@@ -250,15 +237,6 @@ export default function BuyNowPage() {
                     <ShieldCheck className="h-4 w-4" />
                     <span>Secure payment via PhonePe</span>
                   </div>
-
-                  <div className="flex justify-center">
-                    <div className="flex items-center gap-2">
-                      <Image src="/phonepe-logo.png" alt="PhonePe" width={24} height={24} />
-                      <Image src="/upi-logo.png" alt="UPI" width={24} height={24} />
-                      <Image src="/visa-logo.png" alt="Visa" width={24} height={24} />
-                      <Image src="/mastercard-logo.png" alt="Mastercard" width={24} height={24} />
-                    </div>
-                  </div>
                 </CardFooter>
               </Card>
             </div>
@@ -267,6 +245,6 @@ export default function BuyNowPage() {
       </div>
 
       <Footer />
-    </main>
+    </div>
   )
 }
