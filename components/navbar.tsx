@@ -81,6 +81,9 @@ export default function Navbar() {
                   >
                     Privacy Policy
                   </Link>
+                  <Link href="/payment" className={cn("font-medium", pathname === "/payment" && "text-blue-600")}>
+                    Buy Now
+                  </Link>
                 </div>
               </div>
             </SheetContent>
@@ -147,7 +150,7 @@ export default function Navbar() {
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white hidden md:flex"
             asChild
           >
-            <Link href="/checkout">Enroll Now - ₹249</Link>
+            <Link href="/payment">Enroll Now - ₹249</Link>
           </Button>
         </div>
       </div>

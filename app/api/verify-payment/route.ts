@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { verifyPhonePePayment } from "@/lib/phonepe"
+import { verifyPayment } from "@/lib/phonepe-integration"
 
 export async function GET(request: Request) {
   try {
@@ -21,8 +21,8 @@ export async function GET(request: Request) {
     }
 
     // Verify payment
-    console.log("Calling verifyPhonePePayment")
-    const result = await verifyPhonePePayment(merchantTransactionId)
+    console.log("Calling verifyPayment")
+    const result = await verifyPayment(merchantTransactionId)
     console.log("Verification result:", result)
 
     if (result.success) {
@@ -31,6 +31,7 @@ export async function GET(request: Request) {
         paymentSuccess: result.paymentSuccess,
         data: result.data,
         code: result.code,
+        targetUrl: result.targetUrl,
       })
     } else {
       return NextResponse.json(

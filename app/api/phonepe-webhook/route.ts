@@ -2,12 +2,11 @@ import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
   try {
+    // Parse the webhook payload
     const body = await request.json()
+    console.log("PhonePe webhook received:", JSON.stringify(body, null, 2))
 
-    // Log webhook data
-    console.log("PhonePe webhook received:", JSON.stringify(body))
-
-    // Process webhook data
+    // Process the webhook data
     // Here you would typically update your database with payment status
 
     // Return success

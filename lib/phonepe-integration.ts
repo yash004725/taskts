@@ -1,13 +1,16 @@
 import crypto from "crypto"
 
-// PhonePe merchant credentials - using the provided values
-const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || "M22BELQSW340M" // Updated merchant ID
+// PhonePe credentials from the screenshot
+const CLIENT_ID = "SU250430182247397794294"
 const API_KEY = "5093c394-38c3-4002-9813-d5eb127f1eeb"
-const SALT_KEY = "5093c394-38c3-4002-9813-d5eb127f1eeb"
-const SALT_INDEX = process.env.PHONEPE_SALT_INDEX || "1"
+const CLIENT_VERSION = "1"
+const ENVIRONMENT = "PRODUCTION"
 
 // Base URL for callbacks
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://xdigitalhub.vercel.app"
+
+// Target URL to redirect after successful payment
+const TARGET_URL = "https://drive.google.com/file/d/1UuDyrl5KaiLbHvf5_qittwyZPNgCJrRT/view?usp=sharing"
 
 // API endpoints for production
 const API_URL = "https://api.phonepe.com/apis/hermes/pg/v1/pay"
@@ -19,12 +22,11 @@ function generateSHA256(input: string): string {
 }
 
 // Function to initiate PhonePe payment
-export async function initiatePhonePePayment(options: {
+export async function initiatePayment(options: {
   amount: number
-  userId?: string
-  productName?: string
-  mobile?: string
-  email?: string
+  name: string
+  email: string
+  phone: string
 }) {
   try {
     console.log("Initiating PhonePe payment with options:", options)
@@ -38,21 +40,21 @@ export async function initiatePhonePePayment(options: {
     console.log("Amount in paise:", amountInPaise)
 
     // Callback URLs
-    const redirectUrl = `${BASE_URL}/payment/callback?merchantTransactionId=${merchantTransactionId}`
+    const redirectUrl = `${BASE_URL}/payment/success?merchantTransactionId=${merchantTransactionId}`
     const callbackUrl = `${BASE_URL}/api/phonepe-webhook`
     console.log("Redirect URL:", redirectUrl)
     console.log("Callback URL:", callbackUrl)
 
     // Create payload object
     const payload = {
-      merchantId: MERCHANT_ID,
+      merchantId: CLIENT_ID,
       merchantTransactionId: merchantTransactionId,
-      merchantUserId: options.userId || `USER_${Date.now()}`,
+      merchantUserId: `USER_${Date.now()}`,
       amount: amountInPaise,
       redirectUrl: redirectUrl,
       redirectMode: "REDIRECT",
       callbackUrl: callbackUrl,
-      mobileNumber: options.mobile,
+      mobileNumber: options.phone,
       paymentInstrument: {
         type: "PAY_PAGE",
       },
@@ -70,9 +72,9 @@ export async function initiatePhonePePayment(options: {
     console.log("Base64 payload:", payloadBase64)
 
     // Generate checksum
-    const string = payloadBase64 + "/pg/v1/pay" + SALT_KEY
+    const string = payloadBase64 + "/pg/v1/pay" + API_KEY
     const sha256 = generateSHA256(string)
-    const checksum = `${sha256}###${SALT_INDEX}`
+    const checksum = `${sha256}###${CLIENT_VERSION}`
     console.log("Generated checksum:", checksum)
 
     // Create request body
@@ -89,7 +91,6 @@ export async function initiatePhonePePayment(options: {
       headers: {
         "Content-Type": "application/json",
         "X-VERIFY": checksum,
-        "X-API-KEY": API_KEY,
       },
       body: JSON.stringify(requestBody),
     })
@@ -151,18 +152,18 @@ export async function initiatePhonePePayment(options: {
 }
 
 // Function to verify PhonePe payment
-export async function verifyPhonePePayment(merchantTransactionId: string) {
+export async function verifyPayment(merchantTransactionId: string) {
   try {
     console.log("Verifying PhonePe payment for transaction ID:", merchantTransactionId)
 
     // Generate URL for status check
-    const statusUrl = `${STATUS_URL}/${MERCHANT_ID}/${merchantTransactionId}`
+    const statusUrl = `${STATUS_URL}/${CLIENT_ID}/${merchantTransactionId}`
     console.log("Status URL:", statusUrl)
 
     // Generate checksum for verification
-    const string = `/pg/v1/status/${MERCHANT_ID}/${merchantTransactionId}${SALT_KEY}`
+    const string = `/pg/v1/status/${CLIENT_ID}/${merchantTransactionId}${API_KEY}`
     const sha256 = generateSHA256(string)
-    const checksum = `${sha256}###${SALT_INDEX}`
+    const checksum = `${sha256}###${CLIENT_VERSION}`
     console.log("Generated verification checksum:", checksum)
 
     // Make API request
@@ -172,7 +173,7 @@ export async function verifyPhonePePayment(merchantTransactionId: string) {
       headers: {
         "Content-Type": "application/json",
         "X-VERIFY": checksum,
-        "X-API-KEY": API_KEY,
+        "X-MERCHANT-ID": CLIENT_ID,
       },
     })
 
@@ -205,6 +206,7 @@ export async function verifyPhonePePayment(merchantTransactionId: string) {
         paymentSuccess: paymentSuccess,
         data: data.data,
         code: data.code,
+        targetUrl: TARGET_URL,
       }
     } else {
       console.error("PhonePe payment verification failed:", data)
@@ -225,3 +227,6 @@ export async function verifyPhonePePayment(merchantTransactionId: string) {
     }
   }
 }
+
+// Export the target URL for use in other files
+export { TARGET_URL }
