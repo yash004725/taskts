@@ -4,12 +4,9 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CheckCircle, ArrowRight } from "lucide-react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import TestimonialCard from "@/components/testimonial-card"
-import NewsletterSignup from "@/components/newsletter-signup"
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("all")
@@ -64,7 +61,7 @@ export default function Home() {
               </p>
               <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
                 <Button asChild size="lg" className="bg-white font-semibold text-purple-600 hover:bg-gray-100">
-                  <Link href="/buy-now">Buy Now</Link>
+                  <Link href="/payment">Buy Now</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
                   <Link href="/courses">Explore Courses</Link>
@@ -141,166 +138,12 @@ export default function Home() {
                   size="lg"
                   className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                 >
-                  <Link href="/buy-now">
+                  <Link href="/payment">
                     Get Started Now <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section className="bg-gray-50 py-16">
-        <div className="container mx-auto px-4">
-          <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold md:text-4xl">Unbeatable Value</h2>
-            <p className="mx-auto max-w-2xl text-gray-600">
-              Get access to our complete package at an incredible discount for a limited time.
-            </p>
-          </div>
-
-          <div className="mx-auto max-w-lg">
-            <Card className="overflow-hidden border-2 border-purple-500">
-              <div className="bg-purple-500 p-4 text-center text-white">
-                <p className="text-sm font-medium uppercase tracking-wider">Limited Time Offer</p>
-              </div>
-              <CardContent className="p-6">
-                <div className="mb-6 text-center">
-                  <h3 className="text-2xl font-bold">Complete Digital Package</h3>
-                  <div className="mt-4 flex items-center justify-center">
-                    <span className="text-lg text-gray-500 line-through">₹25,993</span>
-                    <span className="ml-3 text-4xl font-bold text-purple-600">₹249</span>
-                  </div>
-                  <p className="mt-2 text-sm text-gray-500">One-time payment, lifetime access</p>
-                </div>
-
-                <ul className="mb-6 space-y-3">
-                  {features.map((feature, index) => (
-                    <li key={index} className="flex items-start">
-                      <CheckCircle className="mr-2 h-5 w-5 shrink-0 text-green-500" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  asChild
-                  size="lg"
-                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                >
-                  <Link href="/buy-now">Buy Now - Only ₹249</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold md:text-4xl">What Our Students Say</h2>
-            <p className="mx-auto max-w-2xl text-gray-600">
-              Don't just take our word for it. Here's what our students have achieved with our course and resources.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {testimonials.map((testimonial, index) => (
-              <TestimonialCard key={index} testimonial={testimonial} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="bg-gray-50 py-16">
-        <div className="container mx-auto px-4">
-          <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold md:text-4xl">Frequently Asked Questions</h2>
-            <p className="mx-auto max-w-2xl text-gray-600">
-              Find answers to common questions about our course and resources.
-            </p>
-          </div>
-
-          <div className="mx-auto max-w-3xl">
-            <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
-              <TabsList className="mb-8 grid w-full grid-cols-3">
-                <TabsTrigger value="all">General</TabsTrigger>
-                <TabsTrigger value="course">Course</TabsTrigger>
-                <TabsTrigger value="payment">Payment</TabsTrigger>
-              </TabsList>
-              <TabsContent value="all" className="space-y-4">
-                <div className="rounded-lg border p-4">
-                  <h3 className="text-lg font-medium">What's included in the package?</h3>
-                  <p className="mt-2 text-gray-600">
-                    Our package includes the complete 3D animation course, 675 GB graphics bundle, All India 100 crore+
-                    database, 2000+ luxury car reels bundle, and 800+ mega courses bundle.
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <h3 className="text-lg font-medium">How long do I have access to the course?</h3>
-                  <p className="mt-2 text-gray-600">
-                    Once purchased, you have lifetime access to all the course materials and resources.
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <h3 className="text-lg font-medium">Is there a refund policy?</h3>
-                  <p className="mt-2 text-gray-600">
-                    Due to the digital nature of our products, we do not offer refunds. Please review our terms and
-                    conditions for more details.
-                  </p>
-                </div>
-              </TabsContent>
-              <TabsContent value="course" className="space-y-4">
-                <div className="rounded-lg border p-4">
-                  <h3 className="text-lg font-medium">What will I learn in the 3D animation course?</h3>
-                  <p className="mt-2 text-gray-600">
-                    You'll learn everything from basic principles to advanced techniques in 3D animation, including
-                    modeling, texturing, rigging, animation, lighting, and rendering.
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <h3 className="text-lg font-medium">Do I need any prior experience?</h3>
-                  <p className="mt-2 text-gray-600">
-                    No prior experience is required. Our course is designed for beginners and gradually progresses to
-                    advanced topics.
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <h3 className="text-lg font-medium">What software will I need?</h3>
-                  <p className="mt-2 text-gray-600">
-                    The course primarily uses Blender, which is free and open-source. Some advanced tutorials may use
-                    other software, but alternatives are always provided.
-                  </p>
-                </div>
-              </TabsContent>
-              <TabsContent value="payment" className="space-y-4">
-                <div className="rounded-lg border p-4">
-                  <h3 className="text-lg font-medium">What payment methods do you accept?</h3>
-                  <p className="mt-2 text-gray-600">
-                    We accept all major credit/debit cards, UPI, net banking, and wallet payments through our secure
-                    payment gateway.
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <h3 className="text-lg font-medium">Is the payment secure?</h3>
-                  <p className="mt-2 text-gray-600">
-                    Yes, all payments are processed through PhonePe, a secure payment gateway that uses
-                    industry-standard encryption to protect your information.
-                  </p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <h3 className="text-lg font-medium">Will I get an invoice?</h3>
-                  <p className="mt-2 text-gray-600">
-                    Yes, you'll receive an invoice via email after your purchase is complete.
-                  </p>
-                </div>
-              </TabsContent>
-            </Tabs>
           </div>
         </div>
       </section>
@@ -315,14 +158,11 @@ export default function Home() {
               ₹249 today!
             </p>
             <Button asChild size="lg" className="bg-white font-semibold text-purple-600 hover:bg-gray-100">
-              <Link href="/buy-now">Buy Now - Limited Time Offer</Link>
+              <Link href="/payment">Buy Now - Limited Time Offer</Link>
             </Button>
           </div>
         </div>
       </section>
-
-      {/* Newsletter Section */}
-      <NewsletterSignup />
 
       <Footer />
     </div>

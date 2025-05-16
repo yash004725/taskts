@@ -71,6 +71,19 @@ export default function PaymentSuccessPage() {
           return
         }
 
+        // Direct success parameter (PhonePe might redirect with this)
+        if (searchParams.get("success") === "true") {
+          console.log("Success parameter found in URL")
+          setStatus("success")
+          setMessage("Payment successful! Redirecting to your digital content...")
+
+          // Redirect to target URL after 3 seconds
+          setTimeout(() => {
+            window.location.href = TARGET_URL
+          }, 3000)
+          return
+        }
+
         // If we don't have any payment reference
         console.log("No payment reference found in URL")
         setStatus("error")

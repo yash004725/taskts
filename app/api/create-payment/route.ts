@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { initiatePayment } from "@/lib/phonepe-integration"
+import { initiateSimplePayment } from "@/lib/phonepe-simple"
 
 export async function POST(request: Request) {
   try {
@@ -25,8 +26,27 @@ export async function POST(request: Request) {
     const amount = 249
     console.log("Using fixed amount:", amount)
 
-    // Initiate payment
-    console.log("Initiating PhonePe payment")
+    // Try the simple implementation first
+    console.log("Initiating PhonePe payment with simple implementation")
+    const simpleResult = await initiateSimplePayment({
+      amount: amount,
+      name: body.name,
+      email: body.email,
+      phone: body.phone,
+    })
+
+    console.log("PhonePe simple payment initiation result:", simpleResult)
+
+    if (simpleResult.success && simpleResult.url) {
+      return NextResponse.json({
+        success: true,
+        url: simpleResult.url,
+        merchantTransactionId: simpleResult.merchantTransactionId,
+      })
+    }
+
+    // If simple implementation fails, try the original implementation
+    console.log("Simple implementation failed, trying original implementation")
     const result = await initiatePayment({
       amount: amount,
       name: body.name,

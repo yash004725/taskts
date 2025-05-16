@@ -4,7 +4,8 @@ import crypto from "crypto"
 const CLIENT_ID = "SU250430182247397794294"
 const API_KEY = "5093c394-38c3-4002-9813-d5eb127f1eeb"
 const CLIENT_VERSION = "1"
-const ENVIRONMENT = "PRODUCTION"
+const SALT_KEY = API_KEY // Using API key as salt key
+const SALT_INDEX = CLIENT_VERSION
 
 // Base URL for callbacks
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://xdigitalhub.vercel.app"
@@ -72,9 +73,9 @@ export async function initiatePayment(options: {
     console.log("Base64 payload:", payloadBase64)
 
     // Generate checksum
-    const string = payloadBase64 + "/pg/v1/pay" + API_KEY
+    const string = payloadBase64 + "/pg/v1/pay" + SALT_KEY
     const sha256 = generateSHA256(string)
-    const checksum = `${sha256}###${CLIENT_VERSION}`
+    const checksum = `${sha256}###${SALT_INDEX}`
     console.log("Generated checksum:", checksum)
 
     // Create request body
@@ -91,6 +92,7 @@ export async function initiatePayment(options: {
       headers: {
         "Content-Type": "application/json",
         "X-VERIFY": checksum,
+        Accept: "application/json",
       },
       body: JSON.stringify(requestBody),
     })
@@ -161,9 +163,9 @@ export async function verifyPayment(merchantTransactionId: string) {
     console.log("Status URL:", statusUrl)
 
     // Generate checksum for verification
-    const string = `/pg/v1/status/${CLIENT_ID}/${merchantTransactionId}${API_KEY}`
+    const string = `/pg/v1/status/${CLIENT_ID}/${merchantTransactionId}${SALT_KEY}`
     const sha256 = generateSHA256(string)
-    const checksum = `${sha256}###${CLIENT_VERSION}`
+    const checksum = `${sha256}###${SALT_INDEX}`
     console.log("Generated verification checksum:", checksum)
 
     // Make API request
@@ -174,6 +176,7 @@ export async function verifyPayment(merchantTransactionId: string) {
         "Content-Type": "application/json",
         "X-VERIFY": checksum,
         "X-MERCHANT-ID": CLIENT_ID,
+        Accept: "application/json",
       },
     })
 

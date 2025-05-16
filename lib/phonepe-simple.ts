@@ -1,12 +1,12 @@
 import crypto from "crypto"
 
-// Simple function to generate SHA-256 hash
+// Function to generate SHA-256 hash
 function generateSHA256(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex")
 }
 
 // Simple function to initiate payment
-export async function initiatePayment(options: {
+export async function initiateSimplePayment(options: {
   amount: number
   name: string
   email: string
@@ -14,10 +14,12 @@ export async function initiatePayment(options: {
 }) {
   try {
     // Get credentials from environment variables
-    const merchantId = process.env.PHONEPE_MERCHANT_ID || "PGTESTPAYUAT"
-    const saltKey = "5093c394-38c3-4002-9813-d5eb127f1eeb" // Using the provided salt key
-    const saltIndex = process.env.PHONEPE_SALT_INDEX || "1"
-    const apiKey = "5093c394-38c3-4002-9813-d5eb127f1eeb" // Using the provided API key
+    const merchantId = "SU250430182247397794294"
+    const saltKey = "5093c394-38c3-4002-9813-d5eb127f1eeb"
+    const saltIndex = "1"
+
+    // Base URL for callbacks
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://xdigitalhub.vercel.app"
 
     // Generate transaction ID
     const txnId = `TXN_${Date.now()}`
@@ -26,11 +28,11 @@ export async function initiatePayment(options: {
     const payload = {
       merchantId: merchantId,
       merchantTransactionId: txnId,
-      amount: options.amount * 100,
-      redirectUrl: "https://xdigitalhub.vercel.app/payment/callback",
+      amount: options.amount * 100, // Convert to paise
+      redirectUrl: `${baseUrl}/payment/success?merchantTransactionId=${txnId}`,
       redirectMode: "REDIRECT",
-      callbackUrl: "https://xdigitalhub.vercel.app/api/webhook",
-      merchantUserId: `USER_${Date.now()}`,
+      callbackUrl: `${baseUrl}/api/phonepe-webhook`,
+      mobileNumber: options.phone,
       paymentInstrument: {
         type: "PAY_PAGE",
       },
@@ -50,12 +52,15 @@ export async function initiatePayment(options: {
       "Content-Type": "application/json",
       "X-VERIFY": checksum,
       Accept: "application/json",
-      "X-API-KEY": apiKey,
     }
 
     const body = JSON.stringify({
       request: base64,
     })
+
+    console.log("Request URL:", url)
+    console.log("Request headers:", headers)
+    console.log("Request body:", body)
 
     // Make request
     const response = await fetch(url, {
@@ -64,43 +69,58 @@ export async function initiatePayment(options: {
       body: body,
     })
 
-    // Parse response
-    const text = await response.text()
-    let data
+    // Get response as text first for logging
+    const responseText = await response.text()
+    console.log("PhonePe API response text:", responseText)
 
+    // Parse response as JSON
+    let data
     try {
-      data = JSON.parse(text)
+      data = JSON.parse(responseText)
     } catch (e) {
+      console.error("Failed to parse PhonePe response as JSON:", e)
       return {
         success: false,
-        error: "Invalid response",
+        error: "Invalid response from payment gateway",
+        rawResponse: responseText,
       }
     }
 
     // Check for success
-    if (!response.ok) {
-      return {
-        success: false,
-        error: `API error: ${response.status}`,
+    if (data.success && data.code === "PAYMENT_INITIATED") {
+      // Extract payment URL
+      const paymentUrl = data.data?.instrumentResponse?.redirectInfo?.url
+      if (!paymentUrl) {
+        console.error("Payment URL not found in response:", data)
+        return {
+          success: false,
+          error: "Payment URL not found in response",
+          rawResponse: data,
+        }
       }
-    }
 
-    // Return payment URL
-    if (data.data?.instrumentResponse?.redirectInfo?.url) {
       return {
         success: true,
-        url: data.data.instrumentResponse.redirectInfo.url,
+        url: paymentUrl,
+        merchantTransactionId: txnId,
       }
     } else {
+      console.error("PhonePe payment initiation failed:", data)
       return {
         success: false,
-        error: "No redirect URL",
+        error: data.message || data.error || "Payment initiation failed",
+        code: data.code,
+        rawResponse: data,
       }
     }
   } catch (error) {
+    console.error("PhonePe payment error:", error)
     return {
       success: false,
-      error: "Payment error",
+      error: error instanceof Error ? error.message : "An error occurred while processing payment",
     }
   }
 }
+
+// For backward compatibility
+export const initiatePayment = initiateSimplePayment

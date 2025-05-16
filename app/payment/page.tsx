@@ -6,10 +6,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { ShieldCheck, Loader2, CheckCircle } from "lucide-react"
+import { ShieldCheck, Loader2, CheckCircle, AlertCircle } from "lucide-react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import Image from "next/image"
+import Link from "next/link"
 
 export default function PaymentPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -19,6 +20,7 @@ export default function PaymentPage() {
     email: "",
     phone: "",
   })
+  const [debugInfo, setDebugInfo] = useState(null)
 
   const handleChange = (e) => {
     setFormData({
@@ -31,6 +33,7 @@ export default function PaymentPage() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
+    setDebugInfo(null)
 
     try {
       // Validate form
@@ -52,19 +55,33 @@ export default function PaymentPage() {
         }),
       })
 
-      const data = await response.json()
+      // Get response as text first for debugging
+      const responseText = await response.text()
+      console.log("Raw API response:", responseText)
+
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (e) {
+        setError("Invalid response from server. Please try again or contact support.")
+        console.error("Failed to parse response as JSON:", e, responseText)
+        setIsLoading(false)
+        return
+      }
+
       console.log("Payment initiation response:", data)
+      setDebugInfo(data)
 
       if (data.success && data.url) {
         // Redirect to payment page
         window.location.href = data.url
       } else {
         console.error("Payment initiation failed:", data)
-        setError(data.error || "Payment initiation failed. Please try again.")
+        setError(data.error || "Payment initiation failed. Please try again or contact support.")
       }
     } catch (err) {
       console.error("Payment error:", err)
-      setError("An error occurred. Please try again.")
+      setError("An error occurred. Please try again or contact support.")
     } finally {
       setIsLoading(false)
     }
@@ -178,7 +195,20 @@ export default function PaymentPage() {
                     </div>
 
                     {error && (
-                      <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-md text-sm">{error}</div>
+                      <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-md text-sm">
+                        <div className="flex items-start">
+                          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium">Payment Error</p>
+                            <p>{error}</p>
+                            {debugInfo && (
+                              <Link href="/payment/debug" className="text-red-700 underline mt-1 inline-block">
+                                Debug Payment
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </form>
                 </CardContent>
