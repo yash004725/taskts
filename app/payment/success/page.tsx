@@ -8,7 +8,9 @@ import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import { TARGET_URL } from "@/lib/phonepe-integration"
+
+// Google Drive link to redirect to after successful payment
+const DRIVE_LINK = "https://drive.google.com/file/d/1UuDyrl5KaiLbHvf5_qittwyZPNgCJrRT/view?usp=sharing"
 
 export default function PaymentSuccessPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
@@ -20,6 +22,9 @@ export default function PaymentSuccessPage() {
   const merchantTransactionId = searchParams.get("merchantTransactionId")
   const transactionId = searchParams.get("transactionId")
   const code = searchParams.get("code")
+  const orderId = searchParams.get("orderId")
+  const cashfreeStatus = searchParams.get("status")
+  const provider = searchParams.get("provider")
 
   useEffect(() => {
     // For debugging
@@ -27,25 +32,54 @@ export default function PaymentSuccessPage() {
       merchantTransactionId,
       transactionId,
       code,
+      orderId,
+      cashfreeStatus,
+      provider,
       allParams: Object.fromEntries(searchParams.entries()),
     })
 
     const verifyPayment = async () => {
       try {
-        // If we have a code from PhonePe and it's successful
+        // Direct access (fallback method)
+        if (provider === "direct") {
+          console.log("Direct access granted")
+          setStatus("success")
+          setMessage("Access granted! Redirecting to your digital content...")
+
+          // Redirect to Google Drive after 3 seconds
+          setTimeout(() => {
+            window.location.href = DRIVE_LINK
+          }, 3000)
+          return
+        }
+
+        // PhonePe success code
         if (code === "PAYMENT_SUCCESS" || code === "SUCCESS") {
           console.log("Payment success code detected in URL")
           setStatus("success")
           setMessage("Payment successful! Redirecting to your digital content...")
 
-          // Redirect to target URL after 3 seconds
+          // Redirect to Google Drive after 3 seconds
           setTimeout(() => {
-            window.location.href = TARGET_URL
+            window.location.href = DRIVE_LINK
           }, 3000)
           return
         }
 
-        // If we have a merchantTransactionId, verify with our API
+        // Cashfree success
+        if (cashfreeStatus === "SUCCESS" || cashfreeStatus === "PAID") {
+          console.log("Cashfree success status detected in URL")
+          setStatus("success")
+          setMessage("Payment successful! Redirecting to your digital content...")
+
+          // Redirect to Google Drive after 3 seconds
+          setTimeout(() => {
+            window.location.href = DRIVE_LINK
+          }, 3000)
+          return
+        }
+
+        // PhonePe verification via API
         if (merchantTransactionId) {
           console.log("Verifying payment with merchantTransactionId:", merchantTransactionId)
 
@@ -60,9 +94,9 @@ export default function PaymentSuccessPage() {
             setStatus("success")
             setMessage("Payment successful! Redirecting to your digital content...")
 
-            // Redirect to target URL after 3 seconds
+            // Redirect to Google Drive after 3 seconds
             setTimeout(() => {
-              window.location.href = data.targetUrl || TARGET_URL
+              window.location.href = DRIVE_LINK
             }, 3000)
           } else {
             setStatus("error")
@@ -71,15 +105,15 @@ export default function PaymentSuccessPage() {
           return
         }
 
-        // Direct success parameter (PhonePe might redirect with this)
+        // Direct success parameter
         if (searchParams.get("success") === "true") {
           console.log("Success parameter found in URL")
           setStatus("success")
           setMessage("Payment successful! Redirecting to your digital content...")
 
-          // Redirect to target URL after 3 seconds
+          // Redirect to Google Drive after 3 seconds
           setTimeout(() => {
-            window.location.href = TARGET_URL
+            window.location.href = DRIVE_LINK
           }, 3000)
           return
         }
@@ -96,7 +130,7 @@ export default function PaymentSuccessPage() {
     }
 
     verifyPayment()
-  }, [code, transactionId, merchantTransactionId, searchParams])
+  }, [code, transactionId, merchantTransactionId, orderId, cashfreeStatus, provider, searchParams])
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -140,7 +174,7 @@ export default function PaymentSuccessPage() {
           <CardFooter className="flex flex-col space-y-2">
             {status === "success" && (
               <Button className="w-full" asChild>
-                <Link href={TARGET_URL}>Access Your Digital Content Now</Link>
+                <Link href={DRIVE_LINK}>Access Your Digital Content Now</Link>
               </Button>
             )}
             {status === "error" && (

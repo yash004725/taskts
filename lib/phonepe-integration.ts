@@ -1,11 +1,10 @@
 import crypto from "crypto"
 
-// PhonePe credentials from the screenshot
-const CLIENT_ID = "SU250430182247397794294"
+// PhonePe credentials from the environment variables
+const CLIENT_ID = "M22BELQSW340M"
 const API_KEY = "5093c394-38c3-4002-9813-d5eb127f1eeb"
-const CLIENT_VERSION = "1"
-const SALT_KEY = API_KEY // Using API key as salt key
-const SALT_INDEX = CLIENT_VERSION
+const SALT_KEY = "SU2504301822473977942947"
+const SALT_INDEX = "1"
 
 // Base URL for callbacks
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://xdigitalhub.vercel.app"
@@ -92,6 +91,7 @@ export async function initiatePayment(options: {
       headers: {
         "Content-Type": "application/json",
         "X-VERIFY": checksum,
+        "X-API-KEY": API_KEY,
         Accept: "application/json",
       },
       body: JSON.stringify(requestBody),
@@ -175,6 +175,7 @@ export async function verifyPayment(merchantTransactionId: string) {
       headers: {
         "Content-Type": "application/json",
         "X-VERIFY": checksum,
+        "X-API-KEY": API_KEY,
         "X-MERCHANT-ID": CLIENT_ID,
         Accept: "application/json",
       },

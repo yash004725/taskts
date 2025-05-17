@@ -13,9 +13,10 @@ export async function initiateSimplePayment(options: {
   phone: string
 }) {
   try {
-    // Get credentials from environment variables
-    const merchantId = "SU250430182247397794294"
-    const saltKey = "5093c394-38c3-4002-9813-d5eb127f1eeb"
+    // PhonePe merchant credentials - using the provided values
+    const merchantId = "M22BELQSW340M"
+    const apiKey = "5093c394-38c3-4002-9813-d5eb127f1eeb"
+    const saltKey = "SU2504301822473977942947"
     const saltIndex = "1"
 
     // Base URL for callbacks
@@ -28,6 +29,7 @@ export async function initiateSimplePayment(options: {
     const payload = {
       merchantId: merchantId,
       merchantTransactionId: txnId,
+      merchantUserId: `USER_${Date.now()}`,
       amount: options.amount * 100, // Convert to paise
       redirectUrl: `${baseUrl}/payment/success?merchantTransactionId=${txnId}`,
       redirectMode: "REDIRECT",
@@ -38,19 +40,26 @@ export async function initiateSimplePayment(options: {
       },
     }
 
+    console.log("Payment payload:", JSON.stringify(payload, null, 2))
+
     // Convert to base64
     const base64 = Buffer.from(JSON.stringify(payload)).toString("base64")
+    console.log("Base64 payload:", base64)
 
     // Generate checksum
     const string = base64 + "/pg/v1/pay" + saltKey
     const sha256 = generateSHA256(string)
     const checksum = `${sha256}###${saltIndex}`
+    console.log("Generated checksum:", checksum)
 
     // Create request
+    // Use production endpoint since we're using real merchant credentials
     const url = "https://api.phonepe.com/apis/hermes/pg/v1/pay"
+
     const headers = {
       "Content-Type": "application/json",
       "X-VERIFY": checksum,
+      "X-API-KEY": apiKey,
       Accept: "application/json",
     }
 
@@ -68,6 +77,9 @@ export async function initiateSimplePayment(options: {
       headers: headers,
       body: body,
     })
+
+    // Log response status
+    console.log("PhonePe API response status:", response.status)
 
     // Get response as text first for logging
     const responseText = await response.text()

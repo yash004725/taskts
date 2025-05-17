@@ -10,7 +10,6 @@ import { ShieldCheck, Loader2, CheckCircle, AlertCircle } from "lucide-react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import Image from "next/image"
-import Link from "next/link"
 
 export default function PaymentPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -39,6 +38,22 @@ export default function PaymentPage() {
       // Validate form
       if (!formData.name || !formData.email || !formData.phone) {
         setError("Please fill in all required fields")
+        setIsLoading(false)
+        return
+      }
+
+      // Validate phone number format (10 digits)
+      const phoneRegex = /^\d{10}$/
+      if (!phoneRegex.test(formData.phone)) {
+        setError("Please enter a valid 10-digit phone number without country code")
+        setIsLoading(false)
+        return
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(formData.email)) {
+        setError("Please enter a valid email address")
         setIsLoading(false)
         return
       }
@@ -77,13 +92,27 @@ export default function PaymentPage() {
         window.location.href = data.url
       } else {
         console.error("Payment initiation failed:", data)
-        setError(data.error || "Payment initiation failed. Please try again or contact support.")
+        setError(
+          data.error ||
+            `Payment initiation failed (${data.code || "unknown error"}). Please try again or contact support.`,
+        )
       }
     } catch (err) {
       console.error("Payment error:", err)
       setError("An error occurred. Please try again or contact support.")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // For testing purposes, pre-fill the form in development
+  const fillTestData = () => {
+    if (process.env.NODE_ENV === "development") {
+      setFormData({
+        name: "Test User",
+        email: "test@example.com",
+        phone: "9876543210",
+      })
     }
   }
 
@@ -175,6 +204,7 @@ export default function PaymentPage() {
                         value={formData.phone}
                         onChange={handleChange}
                         required
+                        placeholder="10-digit number without country code"
                       />
                     </div>
 
@@ -201,11 +231,12 @@ export default function PaymentPage() {
                           <div>
                             <p className="font-medium">Payment Error</p>
                             <p>{error}</p>
-                            {debugInfo && (
-                              <Link href="/payment/debug" className="text-red-700 underline mt-1 inline-block">
-                                Debug Payment
-                              </Link>
-                            )}
+                            <p className="mt-1 text-xs">
+                              Need help? Contact us on WhatsApp:{" "}
+                              <a href="https://wa.me/917247811767" className="underline">
+                                7247811767
+                              </a>
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -228,6 +259,12 @@ export default function PaymentPage() {
                       "Pay ₹249 Now"
                     )}
                   </Button>
+
+                  {process.env.NODE_ENV === "development" && (
+                    <Button variant="outline" onClick={fillTestData} type="button" className="mt-2">
+                      Fill Test Data
+                    </Button>
+                  )}
 
                   <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                     <ShieldCheck className="h-4 w-4" />
