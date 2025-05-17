@@ -35,7 +35,7 @@ export default function PaymentDebugPage() {
 
     try {
       // Create payment
-      const response = await fetch("/api/create-payment", {
+      const response = await fetch("/api/simple-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

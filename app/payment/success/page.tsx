@@ -15,6 +15,7 @@ const DRIVE_LINK = "https://drive.google.com/file/d/1UuDyrl5KaiLbHvf5_qittwyZPNg
 export default function PaymentSuccessPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
   const [message, setMessage] = useState("")
+  const [countdown, setCountdown] = useState(5) // 5 second countdown
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -44,12 +45,7 @@ export default function PaymentSuccessPage() {
         if (provider === "direct") {
           console.log("Direct access granted")
           setStatus("success")
-          setMessage("Access granted! Redirecting to your digital content...")
-
-          // Redirect to Google Drive after 3 seconds
-          setTimeout(() => {
-            window.location.href = DRIVE_LINK
-          }, 3000)
+          setMessage("Payment successful! You will be redirected to access your digital content.")
           return
         }
 
@@ -57,12 +53,7 @@ export default function PaymentSuccessPage() {
         if (code === "PAYMENT_SUCCESS" || code === "SUCCESS") {
           console.log("Payment success code detected in URL")
           setStatus("success")
-          setMessage("Payment successful! Redirecting to your digital content...")
-
-          // Redirect to Google Drive after 3 seconds
-          setTimeout(() => {
-            window.location.href = DRIVE_LINK
-          }, 3000)
+          setMessage("Payment successful! You will be redirected to access your digital content.")
           return
         }
 
@@ -70,12 +61,7 @@ export default function PaymentSuccessPage() {
         if (cashfreeStatus === "SUCCESS" || cashfreeStatus === "PAID") {
           console.log("Cashfree success status detected in URL")
           setStatus("success")
-          setMessage("Payment successful! Redirecting to your digital content...")
-
-          // Redirect to Google Drive after 3 seconds
-          setTimeout(() => {
-            window.location.href = DRIVE_LINK
-          }, 3000)
+          setMessage("Payment successful! You will be redirected to access your digital content.")
           return
         }
 
@@ -92,12 +78,7 @@ export default function PaymentSuccessPage() {
 
           if (data.success && data.paymentSuccess) {
             setStatus("success")
-            setMessage("Payment successful! Redirecting to your digital content...")
-
-            // Redirect to Google Drive after 3 seconds
-            setTimeout(() => {
-              window.location.href = DRIVE_LINK
-            }, 3000)
+            setMessage("Payment successful! You will be redirected to access your digital content.")
           } else {
             setStatus("error")
             setMessage(data.error || "Payment verification failed. Please contact support.")
@@ -109,12 +90,7 @@ export default function PaymentSuccessPage() {
         if (searchParams.get("success") === "true") {
           console.log("Success parameter found in URL")
           setStatus("success")
-          setMessage("Payment successful! Redirecting to your digital content...")
-
-          // Redirect to Google Drive after 3 seconds
-          setTimeout(() => {
-            window.location.href = DRIVE_LINK
-          }, 3000)
+          setMessage("Payment successful! You will be redirected to access your digital content.")
           return
         }
 
@@ -131,6 +107,29 @@ export default function PaymentSuccessPage() {
 
     verifyPayment()
   }, [code, transactionId, merchantTransactionId, orderId, cashfreeStatus, provider, searchParams])
+
+  // Countdown effect for successful payments
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+
+    if (status === "success") {
+      timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer)
+            // Redirect to content after countdown
+            window.location.href = DRIVE_LINK
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [status])
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -156,9 +155,14 @@ export default function PaymentSuccessPage() {
                 <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
                 <p className="text-gray-700 mb-6">{message}</p>
                 <div className="mt-4 w-full bg-blue-50 p-4 rounded-md">
-                  <p className="text-blue-700 font-medium">Redirecting to your digital content...</p>
+                  <p className="text-blue-700 font-medium">
+                    Redirecting to your digital content in {countdown} seconds...
+                  </p>
                   <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                    <div className="bg-blue-600 h-2.5 rounded-full animate-[progress_3s_ease-in-out]"></div>
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-1000 ease-linear"
+                      style={{ width: `${(5 - countdown) * 20}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -168,6 +172,12 @@ export default function PaymentSuccessPage() {
               <div className="py-8 flex flex-col items-center">
                 <XCircle className="h-16 w-16 text-red-600 mb-4" />
                 <p className="text-gray-700 mb-6">{message}</p>
+                <p className="text-sm text-gray-500">
+                  Need help? Contact us on WhatsApp:{" "}
+                  <a href="https://wa.me/917247811767" className="text-blue-600 underline">
+                    7247811767
+                  </a>
+                </p>
               </div>
             )}
           </CardContent>

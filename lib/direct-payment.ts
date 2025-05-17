@@ -1,5 +1,5 @@
 // Direct payment link generator
-// This is a simple fallback that creates a direct link to Google Drive
+// This is a simple fallback that redirects to the success page
 
 export async function createDirectPaymentLink(options: {
   amount: number
@@ -11,14 +11,15 @@ export async function createDirectPaymentLink(options: {
     // In a real implementation, you would save this information to your database
     console.log("Creating direct payment link for:", options)
 
-    // The Google Drive link to redirect to
-    const driveLink = "https://drive.google.com/file/d/1UuDyrl5KaiLbHvf5_qittwyZPNgCJrRT/view?usp=sharing"
+    // Base URL for callbacks
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://xdigitalhub.vercel.app"
 
-    // For demonstration purposes, we're just returning the drive link directly
-    // In a real implementation, you would create a payment record and generate a unique link
+    // Generate a success URL that will redirect to the success page
+    const successUrl = `${baseUrl}/payment/success?provider=direct&success=true`
+
     return {
       success: true,
-      url: driveLink,
+      url: successUrl,
       message: "Direct access granted",
     }
   } catch (error) {

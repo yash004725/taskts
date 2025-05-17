@@ -13,11 +13,11 @@ export async function initiateSimplePayment(options: {
   phone: string
 }) {
   try {
-    // PhonePe merchant credentials - using the provided values
-    const merchantId = "M22BELQSW340M"
-    const apiKey = "5093c394-38c3-4002-9813-d5eb127f1eeb"
-    const saltKey = "SU2504301822473977942947"
-    const saltIndex = "1"
+    // PhonePe merchant credentials from environment variables
+    const merchantId = process.env.PHONEPE_MERCHANT_ID || "M22BELQSW340M"
+    const apiKey = process.env.PHONEPE_API_KEY || "5093c394-38c3-4002-9813-d5eb127f1eeb"
+    const saltKey = process.env.PHONEPE_SALT_KEY || "SU2504301822473977942947"
+    const saltIndex = process.env.PHONEPE_SALT_INDEX || "1"
 
     // Base URL for callbacks
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://xdigitalhub.vercel.app"
@@ -25,12 +25,15 @@ export async function initiateSimplePayment(options: {
     // Generate transaction ID
     const txnId = `TXN_${Date.now()}`
 
+    // Convert amount to paise (multiply by 100)
+    const amountInPaise = Math.round(options.amount * 100)
+
     // Create payload
     const payload = {
       merchantId: merchantId,
       merchantTransactionId: txnId,
       merchantUserId: `USER_${Date.now()}`,
-      amount: options.amount * 100, // Convert to paise
+      amount: amountInPaise,
       redirectUrl: `${baseUrl}/payment/success?merchantTransactionId=${txnId}`,
       redirectMode: "REDIRECT",
       callbackUrl: `${baseUrl}/api/phonepe-webhook`,
@@ -38,6 +41,11 @@ export async function initiateSimplePayment(options: {
       paymentInstrument: {
         type: "PAY_PAGE",
       },
+    }
+
+    // Add email if provided
+    if (options.email) {
+      payload.email = options.email
     }
 
     console.log("Payment payload:", JSON.stringify(payload, null, 2))
@@ -53,7 +61,7 @@ export async function initiateSimplePayment(options: {
     console.log("Generated checksum:", checksum)
 
     // Create request
-    // Use production endpoint since we're using real merchant credentials
+    // Use production endpoint
     const url = "https://api.phonepe.com/apis/hermes/pg/v1/pay"
 
     const headers = {

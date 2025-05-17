@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { ShieldCheck, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { ShieldCheck, Loader2, AlertCircle } from "lucide-react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import Image from "next/image"
@@ -14,12 +14,12 @@ import Image from "next/image"
 export default function PaymentPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [debugInfo, setDebugInfo] = useState<any>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
   })
-  const [debugInfo, setDebugInfo] = useState(null)
 
   const handleChange = (e) => {
     setFormData({
@@ -58,8 +58,10 @@ export default function PaymentPage() {
         return
       }
 
-      // Create payment
-      const response = await fetch("/api/create-payment", {
+      console.log("Submitting payment form:", formData)
+
+      // Create payment using the simple API
+      const response = await fetch("/api/simple-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -80,6 +82,7 @@ export default function PaymentPage() {
       } catch (e) {
         setError("Invalid response from server. Please try again or contact support.")
         console.error("Failed to parse response as JSON:", e, responseText)
+        setDebugInfo({ error: "JSON parse error", rawResponse: responseText })
         setIsLoading(false)
         return
       }
@@ -100,6 +103,7 @@ export default function PaymentPage() {
     } catch (err) {
       console.error("Payment error:", err)
       setError("An error occurred. Please try again or contact support.")
+      setDebugInfo({ error: err.message })
     } finally {
       setIsLoading(false)
     }
@@ -107,13 +111,11 @@ export default function PaymentPage() {
 
   // For testing purposes, pre-fill the form in development
   const fillTestData = () => {
-    if (process.env.NODE_ENV === "development") {
-      setFormData({
-        name: "Test User",
-        email: "test@example.com",
-        phone: "9876543210",
-      })
-    }
+    setFormData({
+      name: "Test User",
+      email: "test@example.com",
+      phone: "9876543210",
+    })
   }
 
   return (
@@ -141,23 +143,23 @@ export default function PaymentPage() {
                 <h2 className="text-xl font-semibold">What You'll Get:</h2>
                 <ul className="space-y-2">
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
                     <span>Complete 3D Animation Course (Basic to Advanced)</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
                     <span>675 GB Graphics Bundle Pack</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
                     <span>All India 100 Crore+ Database</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
                     <span>2000+ Luxury Car Reels Bundle</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
                     <span>800+ Mega Courses Bundle</span>
                   </li>
                 </ul>
@@ -260,11 +262,9 @@ export default function PaymentPage() {
                     )}
                   </Button>
 
-                  {process.env.NODE_ENV === "development" && (
-                    <Button variant="outline" onClick={fillTestData} type="button" className="mt-2">
-                      Fill Test Data
-                    </Button>
-                  )}
+                  <Button variant="outline" onClick={fillTestData} type="button" className="mt-2">
+                    Fill Test Data
+                  </Button>
 
                   <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                     <ShieldCheck className="h-4 w-4" />
@@ -272,6 +272,14 @@ export default function PaymentPage() {
                   </div>
                 </CardFooter>
               </Card>
+
+              {/* Debug Information (only in development) */}
+              {debugInfo && (
+                <div className="mt-4 p-4 bg-gray-100 rounded-md">
+                  <h3 className="font-semibold mb-2">Debug Information:</h3>
+                  <pre className="text-xs overflow-auto max-h-40">{JSON.stringify(debugInfo, null, 2)}</pre>
+                </div>
+              )}
             </div>
           </div>
         </div>
